@@ -1,0 +1,50 @@
+Release 2.2.0
+	* Change the version number to 2.2.0.
+
+Release 2.1.25
+	* Fix one missing convesion from celcius to kelvin in the dewPoint rotine.
+
+Release 2.1.24
+	* Fix wrong "vertical significance" value for high clouds (Ch).
+	* If SA=-3, set snow depth to missing.
+	* Alter the limit for "no wind" condition to 0.1 m/s.
+
+Release 2.1.16exp
+   	* An experimentel release. This implement all db access in one thread.
+
+Release 2.1.14
+   	* encode the bufr message to base64 before saving it to the cache database. This
+   	  should fix the CCN problem.
+   	  
+Release 2.1.14
+	* For consistency compute regional precipitation from RA as 6 hours interval.
+
+Release 2.1.12
+  * Fix timeperiod for sunshine observations.
+  * Use RR_1 or RA to compute a one hour precipitation for station that has it when
+    the precip is specified to come from RRRTr.
+  * Use FG_010 for all termins if we have it.
+  * Cancel height for data after the wind observations. 
+
+Release 2.1.10
+  * New relese to make etch repo happy.
+
+
+Release 2.1.9
+  * Convert snowdepth (SA) from cm to meter.
+
+Release 2.1.8
+  * Pad station name with space.
+  * Fix a bug in setting of SA and EM.
+  * Only report SA and EM at 6 in the morning.
+   
+Release 2.1.7 
+  * Fix station type.
+  * Fix pressure difference.
+  * Fix horizontal visibility.
+  * Fix clouds.
+  * Fix height of base clouds.
+  * Fix min/max temperature.
+  * Fix wind gust.
+  * Fix snow depth.
+  * Fix precipitation. 
