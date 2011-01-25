@@ -2,7 +2,7 @@ SUBDIRS = src
 ACLOCAL_AMFLAGS = -I m4
 
 	
-#EXTRA_DIST = 
+EXTRA_DIST = changelog
 
 install-data-hook:
 	$(install_sh) -m 755 -d $(DESTDIR)/$(localstatedir)/lib/@PACKAGE_NAME@
