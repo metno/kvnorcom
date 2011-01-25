@@ -27,23 +27,19 @@ db_get kvalobs/homedir && KV_HOME="$RET"
 
 #BINDIR, BIN and DIR must be in sync with the respectives variables in postrm.
 BINDIR="/usr/bin"
-BIN="check_kvbufrd.sh kvbufrclt kvbufrd kvbufrdbadmin kvbufrdbclt
-     kvbufrd_initdb kvbufrdparse"
+BIN="norcom2kv"
 
 KVBINDIR=""
 KVBIN=""
 
 ETC_FILES=" "
 
-DIRS="/usr/share/kvbufrd 
-      /var/lib/kvbufrd
-      /var/log/kvalobs/kvbufr/debug
-      /var/log/kvalobs/kvbufr
-      /var/lib/kvalobs/run
-      /var/lib/kvalobs/service
-      /var/lib/kvalobs/service/subscribers"     
+DIRS="/usr/share/norcom2kv 
+      /var/lib/norcom2kv
+      /var/lib/norcom2kv/tmp
+      /var/lib/norcom2kv/data2kv
+      /var/lib/kvalobs/run"
 
-SQLLITE_DB="/var/lib/kvbufrd/kvbufr.sqlite"
 
 case "$1" in
   configure)
@@ -100,22 +96,6 @@ case "$1" in
 		fi
     fi
     
-    #Only the kvalobs user and group can write to the cache databases.
-    for i in $SQLLITE_DB; do
-      # only do something when no setting exists
-      if ! dpkg-statoverride --list $i >/dev/null 2>&1
-      then
-	  dpkg-statoverride --update --add root $KV_USER 664 $i
-      fi 
-    done
-
-#    update-rc.d kvalobs defaults    
-    
-#    if which invoke-rc.d >/dev/null 2>&1; then
-#         invoke-rc.d kvalobs start ignore-postgres
-#    else
-#	 /etc/init.d/kvalobs start ignore-postgres
-#    fi
     ;;
 
   abort-upgrade|abort-remove|abort-deconfigure)

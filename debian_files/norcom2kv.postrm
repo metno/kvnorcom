@@ -23,23 +23,20 @@ set -e
 
 #BINDIR, BIN and DIR must be in sync with the respectives variables in postrm.
 BINDIR="/usr/bin"
-BIN="check_kvbufrd.sh kvbufrclt kvbufrd kvbufrdbadmin kvbufrdbclt
-     kvbufrd_initdb kvbufrdparse"
+BIN="norcom2kv"
 
 KVBINDIR=""
 KVBIN=""
 
 ETC_FILES=" "
 
-DIRS="/usr/share/kvbufrd 
-      /var/lib/kvbufrd
-      /var/log/kvalobs/kvbufr/debug
-      /var/log/kvalobs/kvbufr
+DIRS="/usr/share/norcom2kv 
+      /var/lib/norcom2kv
       /var/lib/kvalobs/run
-      /var/lib/kvalobs/service
-      /var/lib/kvalobs/service/subscribers"     
+      /var/lib/norcom2kv/
+      /var/lib/norcom2kv/tmp
+	  /var/lib/norcom2kv/data2kv"      
 
-SQLLITE_DB="/var/lib/kvbufrd/kvbufrd.sqlite"
 
 case "$1" in
     remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
@@ -58,11 +55,6 @@ case "$1" in
         dpkg-statoverride --remove $i
      done
 
-     #Remove the cache databases.
-     for i in $SQLLITE_DB; do
-        dpkg-statoverride --remove $i
-        rm -f $i 
-     done
      
      for i in $ETC_FILES; do
 	 	dpkg-statoverride --remove /etc/kvalobs/$i

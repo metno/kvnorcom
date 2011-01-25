@@ -1,0 +1,8 @@
+etc/kvalobs
+usr/bin
+usr/share/norcom2kv
+var/lib/norcom2kv
+var/lib//norcom2kv/data2kv
+var/lib/norcom2kv/tmp
+var/log/kvalobs
+var/run/kvalobs

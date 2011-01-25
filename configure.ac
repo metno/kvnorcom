@@ -1,5 +1,5 @@
 AC_PREREQ([2.59])
-AC_INIT([kvbufrd], [2.2.0], [kvoss@met.no])
+AC_INIT([norcom2kv], [2.2.0], [kvoss@met.no])
 AM_INIT_AUTOMAKE([foreign])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -15,12 +15,9 @@ AC_CONFIG_HEADERS(config.h)
 KV_FIND_OMNIORB4
 PKG_CHECK_MODULES(putools, puTools)
 LIBKVCPP
-PKG_CHECK_MODULES(sqlite3, sqlite3)
-
 
 GTEST_CHECK
 GMOCK_CHECK
-
 
 AX_BOOST_BASE
 AX_BOOST_THREAD
@@ -35,10 +32,7 @@ if test -z $BOOST_PROGRAM_OPTIONS_LIB; then AC_MSG_ERROR([Unable to find boost p
 
 
 AC_CONFIG_FILES([Makefile
-                 check_kvbufrd.sh
-                 src/kvbufrd_initdb
                  src/Makefile
-                 share/bufrtables/Makefile
 ])
 
 
