@@ -127,9 +127,9 @@ App::App(int argn,
     
 
 
-    data2kvdir_ = kvPath("localstatedir")+"/norcom2kv/data2kv/";
-    tmpdir_     = kvPath("localstatedir")+"/norcom2kv/tmp/";
-    logdir_     = kvPath("localstatedir")+"/log/";
+    data2kvdir_ = kvPath("localstatedir", "norcom2kv")+"/data2kv/";
+    tmpdir_     = kvPath("localstatedir","norcom2kv") + "/tmp/";
+    logdir_     = kvPath("logdir" );
 
     data2kvdir_=checkdir(data2kvdir_, true);
     tmpdir_=checkdir(tmpdir_, true);
