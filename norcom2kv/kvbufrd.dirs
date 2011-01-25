@@ -1,8 +1,0 @@
-etc/kvalobs
-usr/bin
-usr/share/kvbufrd
-var/lib/kvbufrd
-var/log/kvalobs
-var/log/kvalobs/kvbufr
-var/log/kvalobs/kvbufr/debug
-var/run/kvalobs
