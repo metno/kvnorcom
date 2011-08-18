@@ -232,7 +232,7 @@ CollectSynop::run()
       return 1;
    }
 
-   app.readFInfoList( kvPath("localstatedir")+"/norcom2kv/norcom2kv_finfo.dat",
+   app.readFInfoList( kvPath("localstatedir", "norcom2kv")+"/norcom2kv_finfo.dat",
                       fileInfoList);
 
    while(!app.inShutdown()){
@@ -245,7 +245,7 @@ CollectSynop::run()
 
          if(checkForNewObservations()){
             collectObservations();
-            app.saveFInfoList( kvPath("localstatedir")+"/norcom2kv/norcom2kv_finfo.dat",
+            app.saveFInfoList( kvPath("localstatedir", "norcom2kv")+"/norcom2kv_finfo.dat",
                                fileInfoList);
 
          }
