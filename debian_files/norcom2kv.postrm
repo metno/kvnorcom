@@ -32,7 +32,7 @@ ETC_FILES=" "
 
 DIRS="/usr/share/norcom2kv 
       /var/lib/norcom2kv
-      /var/lib/kvalobs/run
+      /var/run/kvalobs
       /var/lib/norcom2kv/
       /var/lib/norcom2kv/tmp
 	  /var/lib/norcom2kv/data2kv"      
