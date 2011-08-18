@@ -1,3 +1,10 @@
+norcom2kv (2.4.1~rc1-1) lucid; urgency=low 
+
+  * Fix wrong path /var/lib/kvalobs/norcom2kv. Correct path /var/lib/norcom2kv.
+  
+ -- Kvalobs <kvalobs@met.no>  Thu, 18 Aug 2011 15:10:00 +0200
+
+
 norcom2kv (2.4.0~amd64-3) lucid; urgency=low 
 
   * Fix wrong path for pidfile. Right path /var/run/kvalobs.
