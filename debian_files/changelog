@@ -1,4 +1,4 @@
-norcom2kv (2.4.0-2) lucid; urgency=low 
+norcom2kv (2.4.0~amd64-2) lucid; urgency=low 
 
   * Compile on a 64 bit platform.
   
