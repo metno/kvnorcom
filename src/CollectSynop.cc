@@ -320,7 +320,7 @@ CollectSynop::tryToSendSavedObservations()
       if(!sendMessageToKvalobs(content, type, kvServerIsUp, tryToResend)){
 
          if(!tryToResend){
-            LOGERROR("SAVEDOBS, kvalobs 'says' I shouls delete the observation.");
+            LOGERROR("SAVEDOBS, kvalobs 'says' I should delete the observation.");
             unlink(it->name().c_str());
          }else{
             LOGERROR("Cant send saved observation to kvalobs." << endl
@@ -333,7 +333,7 @@ CollectSynop::tryToSendSavedObservations()
          if(!kvServerIsUp)
             break;
       }else{
-         LOGINFO("Kvalobs got the observation. Deleteing local copy!");
+         LOGINFO("Kvalobs got the observation. Delete local copy!");
          unlink(it->name().c_str());
       }
    }
@@ -410,7 +410,7 @@ CollectSynop::doNewObs(const std::string &obsFileName, const std::string &obs)
    if(!wmoRaport.split(obs)){
       ostringstream ost;
       std::string fname;
-      fname=writeFile(app.logdir(), "dataerror_"+filename+"_" , true, obs);
+      fname=writeFile(app.logdir()+"norcom2kv/", "dataerror_"+filename+"_" , true, obs);
 
       ost << "Cant split the WMO raport. " << endl
             << "Error: " << wmoRaport.error() << endl
@@ -432,7 +432,7 @@ CollectSynop::doNewObs(const std::string &obsFileName, const std::string &obs)
    if(!err.empty()){
       std::string fname;
 
-      fname=writeFile(app.logdir(), "datawarn_"+filename+"_", true, obs);
+      fname=writeFile(app.logdir()+"norcom2kv/", "datawarn_"+filename+"_", true, obs);
 
       if(!fname.empty()){
          LOGWARN("It was problems with the splitting of the WMO raport." << endl
@@ -566,7 +566,7 @@ CollectSynop::writeFile(const std::string &dir,
             fd=fopen(file.c_str(), "w");
 
             if(fd)
-               break; //Break out of while loopen
+               break; //Break out of the while loop
          }else
             fclose(fd);
 
