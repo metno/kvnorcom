@@ -1,3 +1,10 @@
+norcom2kv (2.4.1~rc2-1) lucid; urgency=low 
+
+  * For SYNOP report files that fails or has warnings. Save them in /var/log/kvalobs/norcom2kv. 
+  * In the norcom2kv.postrm. Do not remove paths that may belong to the kvalobs package.
+  
+ -- Kvalobs <kvalobs@met.no>  Wed, 05 Oct 2011 10:30:00 +0200
+
 norcom2kv (2.4.1~rc1-1) lucid; urgency=low 
 
   * Fix wrong path /var/lib/kvalobs/norcom2kv. Correct path /var/lib/norcom2kv.
