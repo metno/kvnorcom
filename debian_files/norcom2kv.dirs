@@ -5,4 +5,5 @@ var/lib/norcom2kv
 var/lib//norcom2kv/data2kv
 var/lib/norcom2kv/tmp
 var/log/kvalobs
+var/log/kvalobs/norcom2kv
 var/run/kvalobs
