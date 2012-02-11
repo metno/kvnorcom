@@ -1,3 +1,9 @@
+norcom2kv (2.4.1~rc3-1) lucid; urgency=low 
+
+  * Update the build script.
+  
+ -- Kvalobs <kvalobs@met.no>  Sat, 11 Feb 2012 16:00:00 +0100
+
 norcom2kv (2.4.1~rc2-1) lucid; urgency=low 
 
   * For SYNOP report files that fails or has warnings. Save them in /var/log/kvalobs/norcom2kv. 
