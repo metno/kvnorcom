@@ -1,3 +1,10 @@
+norcom2kv (2.4.1-1) lucid; urgency=low 
+
+  * Release.
+  
+ -- Kvalobs <kvalobs@met.no>  Fri, 24 Feb 2012 12:45:00 +0100
+
+
 norcom2kv (2.4.1~rc4-1) lucid; urgency=low 
 
   * Update the build script.
