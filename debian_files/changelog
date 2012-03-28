@@ -1,3 +1,10 @@
+norcom2kv (2.4.2-1) lucid; urgency=low 
+
+  * Change dependency from libkvcpp to libkvcpp2
+  
+ -- Kvalobs <kvalobs@met.no>  Wed, 28 Mar 2012 10:30:00 +0200
+
+
 norcom2kv (2.4.1-1) lucid; urgency=low 
 
   * Release.
