@@ -1,3 +1,10 @@
+norcom2kv (2.4.3-1) lucid; urgency=low 
+
+  * Just a rebuild agains kvalobs 2.5.0.
+  
+ -- Kvalobs <kvalobs@met.no>  Thu, 29 Mar 2012 17:00:00 +0200
+
+
 norcom2kv (2.4.2-2) lucid; urgency=low 
 
   * Just a rebuild agains kvalobs 2.5.0.
