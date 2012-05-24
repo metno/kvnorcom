@@ -539,7 +539,7 @@ CollectSynop::writeFile(const std::string &dir,
                         bool  fnameIsTemplate,
                         const std::string &content)
 {
-   const int MAX_COUNT=100;
+   const int MAX_COUNT=10000;
    ostringstream ost;
    int           i=0;
    miTime        now(miTime::nowTime());
@@ -572,8 +572,10 @@ CollectSynop::writeFile(const std::string &dir,
 
             if(fd)
                break; //Break out of the while loop
-         }else
+         }else {
             fclose(fd);
+            fd = 0;
+         }
 
          i++;
       }
@@ -589,6 +591,9 @@ CollectSynop::writeFile(const std::string &dir,
       if(!fd)
          return string();
    }
+
+   if( ! fd )
+      return "";
 
    fwRet=fwrite(content.c_str(), content.length(), 1, fd);
    fclose(fd);
