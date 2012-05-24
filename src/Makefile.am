@@ -20,6 +20,8 @@ norcom2kv_SOURCES = norcom2kv.cc \
 norcom2kv_CPPFLAGS = $(AM_CPPFLAGS)
 norcom2kv_LDFLAGS = -pthread 
 norcom2kv_LDADD = $(kvcpp_LIBS) \
-                  $(putools_LIBS) $(omniORB4_LIBS) $(BOOST_REGEX_LIB) $(BOOST_THREAD_LIB) \
+                  $(putools_LIBS) $(omniORB4_LIBS)\
+                  $(BOOST_REGEX_LIB) $(BOOST_THREAD_LIB) \
+                  $(BOOST_FILESYSTEM_LIB) \
                   -lm -ldl 
 
