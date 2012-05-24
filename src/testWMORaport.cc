@@ -61,14 +61,17 @@ main(int argn, char **argv)
   }
  
  cout << wmo << endl;
+
+ cout << " ------- ERROR BEGIN ---------- " << endl;
  cerr << wmo.error() << endl;
+ cout << " ------- ERROR END ---------- " << endl;
 }
 
 
 bool
 readFile(const std::string &filename, std::string &content)
 {
-  fstream fist(filename.c_str());
+  ifstream fist(filename.c_str());
   string buf;
   ostringstream ost;
 

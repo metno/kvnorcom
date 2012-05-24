@@ -4,7 +4,7 @@ AM_CPPFLAGS = -D_REENTRANT \
               $(omniORB4_CFLAGS)  
 
 bin_PROGRAMS = norcom2kv
-
+noinst_PROGRAMS = testWMORaport
 norcom2kv_SOURCES = norcom2kv.cc \
                     CollectSynop.cc  CollectSynop.h \
                     App.cc App.h \
@@ -24,4 +24,16 @@ norcom2kv_LDADD = $(kvcpp_LIBS) \
                   $(BOOST_REGEX_LIB) $(BOOST_THREAD_LIB) \
                   $(BOOST_FILESYSTEM_LIB) \
                   -lm -ldl 
+
+testWMORaport_SOURCES = \
+	testWMORaport.cc testWMORaport.h \
+	WMORaport.cc WMORaport.h 
+
+testWMORaport_CPPFLAGS = $(AM_CPPFLAGS)
+testWMORaport_LDFLAGS = -pthread 
+testWMORaport_LDADD = $(kvcpp_LIBS) \
+              $(putools_LIBS) \
+              $(BOOST_REGEX_LIB) $(BOOST_THREAD_LIB) \
+              $(BOOST_FILESYSTEM_LIB) \
+              -lm -ldl 
 
