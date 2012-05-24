@@ -518,7 +518,7 @@ CollectSynop::sendWMORaport(const WMORaport &wmoRaports)
                   fname=writeFile(app.data2kvdir(), prefix, true, kvOst.str());
 
                   if(fname.empty()){
-                     LOGERROR("Cant save 'kvadata_" << decoder << "_' in directory: " << endl
+                     LOGERROR("Cant save '" << prefix << "' in directory: " << endl
                               << app.data2kvdir());
                   }else{
                      LOGINFO("Saved: " << endl << fname << endl);
