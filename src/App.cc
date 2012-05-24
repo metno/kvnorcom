@@ -133,15 +133,15 @@ getDir( ConfSection *conf, const char *key )
 
    if(valelem.size()>0) {
       val = boost::trim_copy( valelem[0].valAsString() );
-      if( val.rbegin() != val.rend() && *val.rbegin() == '/')
-         val.erase( val.length() - 1 );
+      if( val.rbegin() != val.rend() && *val.rbegin() != '/')
+         val += "/";
    }
 
    return val;
 }
 
-bool
-createDir( const std::string &dir )
+void
+createDir( std::string &dir )
 {
    try {
       if( ! fs::exists( dir ) ) {
@@ -157,6 +157,9 @@ createDir( const std::string &dir )
       LOGERROR("Failed to create directory '" << dir << "'.");
       exit( 1 );
    }
+
+   if( dir.rbegin() != dir.rend() && *dir.rbegin() != '/')
+      dir += "/";
 }
 
 }
@@ -231,7 +234,7 @@ App::App(int argn,
    if( data2kvdir_.empty() )
       data2kvdir_ = kvPath("localstatedir", "norcom2kv")+"/data2kv/";
 
-   tmpdir_  = data2kvdir_ + "/tmp/";
+   tmpdir_  = data2kvdir_ + "tmp/";
    logdir_  = getDir(myConf, "logdir");
 
    if( logdir_.empty() )
