@@ -34,8 +34,11 @@
 #include <unistd.h>
 #include <signal.h> 
 #include <string.h>
+#include <utility>
 #include <boost/regex.hpp>
+#include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/algorithm/string.hpp>
 #include <milog/milog.h>
 #include "App.h"
 #include <fstream>
@@ -49,6 +52,7 @@ using namespace milog;
 using namespace boost;
 using miutil::conf::ConfSection;
 using miutil::conf::ValElementList;
+using miutil::conf::ValElement;
 using miutil::conf::CIValElementList;
 
 namespace{
@@ -59,7 +63,65 @@ void usage();
 }
 
 
+namespace {
 
+App::RaportDef
+getRaportConf( ConfSection   *myConf ) {
+   App::RaportDef raports;
+   App::RaportDefValue rapVal;
+   string::size_type i;
+   string val;
+   string reportType;
+   string decoder;
+   ValElementList valelem=myConf->getValue("raports");
+
+   BOOST_FOREACH( ValElement raport, valelem ) {
+      val = raport.valAsString();
+
+      i = val.find(":");
+      if( i != string::npos ) {
+         reportType = val.substr(0, i );
+         decoder = val.substr( i + 1 );
+      } else {
+         reportType = val;
+         decoder="";
+      }
+
+      boost::trim( reportType );
+      boost::to_upper( reportType );
+
+      if( decoder.empty() )
+         decoder = boost::to_lower_copy( reportType );
+
+      boost::trim( decoder );
+
+      if( reportType == "AREP" )
+         raports.push_back( make_pair( decoder, wmoraport::AREP ) );
+      else if( reportType == "BATH" )
+         raports.push_back( make_pair( decoder, wmoraport::BATH ) );
+      else if( reportType == "DRAU" )
+         raports.push_back( make_pair( decoder, wmoraport::DRAU ) );
+      else if( reportType == "METAR" )
+         raports.push_back( make_pair( decoder, wmoraport::METAR ) );
+      else if( reportType == "PILO" )
+         raports.push_back( make_pair( decoder, wmoraport::PILO ) );
+      else if( reportType == "SYNOP" )
+         raports.push_back( make_pair( decoder, wmoraport::SYNOP ) );
+      else if( reportType == "TEMP" )
+         raports.push_back( make_pair( decoder, wmoraport::TEMP ) );
+      else if( reportType == "TIDE" )
+         raports.push_back( make_pair( decoder, wmoraport::TIDE ) );
+      else
+         LOGWARN( "Param <raports>: Unknown wmo raport '" << val << "'.");
+   }
+
+   if( raports.empty() )
+      raports.push_back( make_pair("synop", wmoraport::SYNOP ) );
+
+   return raports;
+}
+
+}
 
 
 App::App(int argn, 
@@ -163,6 +225,10 @@ App::App(int argn,
       else
          tracelevel="DEBUG";
    }
+
+
+   if(myConf)
+      raports = getRaportConf( myConf );
 
 
    /**
@@ -461,6 +527,31 @@ App::inShutdown()const
    return sigTerm>0;
 }
 
+
+std::list<wmoraport::WmoRaport>
+App::
+getRaportsToCollect()const
+{
+   std::list<wmoraport::WmoRaport> ret;
+
+   BOOST_FOREACH( RaportDefValue v, raports) {
+      ret.push_back( v.second );
+   }
+
+   return ret;
+}
+
+std::string
+App::
+getDecoder( wmoraport::WmoRaport raportType ) const
+{
+   BOOST_FOREACH( RaportDefValue v, raports) {
+      if( v.second == raportType )
+         return v.first;
+   }
+
+   return "";
+}
 
 /*
 std::string 

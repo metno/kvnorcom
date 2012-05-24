@@ -33,6 +33,7 @@
 #include <iostream>
 #include <sstream>
 #include <boost/regex.hpp>
+#include <boost/foreach.hpp>
 #include "WMORaport.h"
 
 using namespace std;
@@ -532,3 +533,43 @@ operator<<(std::ostream& output,
 }
 	
   
+WMORaport::MsgMapsList
+WMORaport::
+getRaports( const std::list<wmoraport::WmoRaport> &raports )const
+{
+   MsgMapsList ret;
+
+   BOOST_FOREACH( wmoraport::WmoRaport raport, raports ){
+      switch( raport ) {
+         case wmoraport::AREP: ret[wmoraport::AREP] = &arep_; break;
+         case wmoraport::BATH: ret[wmoraport::BATH] = &bath_; break;
+         case wmoraport::DRAU: ret[wmoraport::DRAU ] = &drau_; break;
+         case wmoraport::METAR: ret[wmoraport::METAR] = &metar_; break;
+         case wmoraport::PILO: ret[wmoraport::PILO] = &pilo_; break;
+         case wmoraport::SYNOP: ret[wmoraport::SYNOP] = &synop_; break;
+         case wmoraport::TEMP: ret[wmoraport::TEMP] = &temp_; break;
+         case wmoraport::TIDE: ret[wmoraport::TIDE] = &tide_ ; break;
+         default:
+            continue;
+      }
+   }
+   return ret;
+}
+
+std::ostream&
+operator<<(std::ostream& out, wmoraport::WmoRaport raportType )
+{
+   switch( raportType ) {
+      case wmoraport::AREP: out << "AREP"; break;
+      case wmoraport::BATH: out << "BATH"; break;
+      case wmoraport::DRAU: out << "DRAU"; break;
+      case wmoraport::METAR: out << "METAR"; break;
+      case wmoraport::PILO: out << "PILO"; break;
+      case wmoraport::SYNOP: out << "SYNOP"; break;
+      case wmoraport::TEMP: out << "TEMP"; break;
+      case wmoraport::TIDE: out << "TIDE"; break;
+      default:
+         out << "UNKNOWN";
+   }
+   return out;
+}

@@ -35,6 +35,11 @@
 #include <string>
 #include <sstream>
 
+namespace wmoraport {
+typedef enum{SYNOP, METAR, TEMP, PILO,AREP, DRAU, BATH, TIDE} WmoRaport;
+}
+
+
 class WMORaport{
  public:
   typedef std::list<std::string>                          MsgList;
@@ -43,6 +48,7 @@ class WMORaport{
   typedef std::map<std::string, MsgList >                   MsgMap;
   typedef std::map<std::string, MsgList >::iterator        IMsgMap;
   typedef std::map<std::string, MsgList >::const_iterator CIMsgMap;
+  typedef std::map<wmoraport::WmoRaport,const MsgMap*>  MsgMapsList;
 
  protected:
   typedef enum{START, ENDMSG, TYPE, BL,
@@ -92,10 +98,15 @@ class WMORaport{
   MsgMap bath()const { return bath_;}
   MsgMap tide()const { return tide_;}
 
+  MsgMapsList getRaports( const std::list<wmoraport::WmoRaport> &raports )const;
+
   friend std::ostream& operator<<(std::ostream& output,
 				  const WMORaport& r);
   
 };
+
+std::ostream& operator<<(std::ostream& output, wmoraport::WmoRaport raportType );
+
 
 
 #endif

@@ -35,11 +35,17 @@
 #include <map>
 #include <kvskel/datasource.hh>
 #include <kvalobs/kvapp.h>
+#include "WMORaport.h"
 #include "FInfo.h"
 #include "kvDataSrcList.h"
 
 class App : public KvApp
 {
+public:
+   typedef std::pair<std::string, wmoraport::WmoRaport> RaportDefValue;
+   typedef std::list< RaportDefValue > RaportDef;
+
+private:
   CKvalObs::CDataSource::Data_var refData;
   std::string synopdir_;
   std::string tmpdir_;
@@ -48,6 +54,7 @@ class App : public KvApp
   std::string logdir_;
   TKvDataSrcList refDataList;
   bool          debug_;
+  std::list< std::pair<std::string, wmoraport::WmoRaport> > raports;
 
   void initLogger(const std::string &ll, const std::string &tl);
 
@@ -112,6 +119,8 @@ class App : public KvApp
    std::string tmpdir()const {return tmpdir_;}
    std::string data2kvdir()const {return data2kvdir_;}
    std::string synopdir()const{ return synopdir_;}
+   std::list<wmoraport::WmoRaport> getRaportsToCollect()const;
+   std::string getDecoder( wmoraport::WmoRaport raportType ) const;
 };
 
 

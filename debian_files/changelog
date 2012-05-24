@@ -1,3 +1,11 @@
+norcom2kv (2.4.4~RC1-1) lucid; urgency=low 
+
+  * Added support for more WMO formats, particularly METAR.
+    Which format to scan for is now an configuration option.
+  
+ -- Kvalobs <kvalobs@met.no>  Thu, 24 May 2012 15:00:00 +0200
+
+
 norcom2kv (2.4.3-1) lucid; urgency=low 
 
   * Just a rebuild agains kvalobs 2.5.0.

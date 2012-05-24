@@ -34,9 +34,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <string.h>
-#include <milog/milog.h>
 #include <sstream>
 #include <fstream>
+#include <boost/foreach.hpp>
+#include <boost/algorithm/string.hpp>
+#include <milog/milog.h>
 #include <fileutil/dir.h>
 #include <fileutil/copyfile.h>
 #include "CollectSynop.h"
@@ -277,7 +279,7 @@ CollectSynop::tryToSendSavedObservations()
    bool      kvServerIsUp;
    bool      tryToResend;
 
-   if(!getFileList(fileList, app.data2kvdir(),"kvdata_synop*")){
+   if(!getFileList(fileList, app.data2kvdir(),"kvdata_*")){
       //LOGDEBUG("No saved observations!");
       return;
    }
@@ -481,48 +483,50 @@ CollectSynop::doNewObs(const std::string &obsFileName, const std::string &obs)
 
 
 void
-CollectSynop::sendWMORaport(const WMORaport &raport)
+CollectSynop::sendWMORaport(const WMORaport &wmoRaports)
 {
    ostringstream        ost;
-   WMORaport::MsgMap    msg=raport.synop();
-   WMORaport::CIMsgMap  msgIt;
-   WMORaport::CIMsgList mlIt;
-   WMORaport::MsgList   ml;
+   WMORaport::MsgMapsList raports;
    bool                 kvServerIsUp;
    bool                 tryToResend;
+   string decoder;
+   raports=wmoRaports.getRaports( app.getRaportsToCollect() );
 
-   for(msgIt=msg.begin();
-         msgIt!=msg.end();
-         msgIt++){
-      ml=msgIt->second;
+   BOOST_FOREACH(WMORaport::MsgMapsList::value_type raport, raports ) {
+      decoder = app.getDecoder( raport.first );
 
-      for(mlIt=ml.begin();
-            mlIt!=ml.end();
-            mlIt++){
-         ost.str("");
-         ost << msgIt->first << " " << endl << *mlIt;
+      if( decoder.empty() ) {
+         LOGERROR("No decoder defined for wmo report <" << raport.first << ">. Cant send data to kvalobs.");
+         continue;
+      }
 
-         if(!sendMessageToKvalobs(ost.str(), "synop", kvServerIsUp,tryToResend)){
-            string fname;
-            ostringstream kvOst;
+      BOOST_FOREACH( WMORaport::MsgMap::value_type msgValList, *raport.second ) {
+         BOOST_FOREACH( WMORaport::MsgList::value_type msg, msgValList.second ){
+            ost.str("");
+            ost << msgValList.first << " " << endl << msg;
 
-            LOGERROR("Cant send observation to kvalobs." << endl  <<
-                     ost.str());
-            kvOst << "synop" << endl << ost.str() << endl;
+             if(!sendMessageToKvalobs(ost.str(), decoder, kvServerIsUp,tryToResend)){
+               string fname;
+               ostringstream kvOst;
 
-            if(tryToResend){
-               fname=writeFile(app.data2kvdir(), "kvdata_synop_", true, kvOst.str());
+               LOGERROR("Cant send observation to kvalobs." << endl  <<
+                        ost.str());
+               kvOst << decoder << endl << ost.str() << endl;
 
-               if(fname.empty()){
-                  LOGERROR("Cant save 'kvadata_synop_' in directory: " << endl
-                           << app.data2kvdir());
-               }else{
-                  LOGINFO("Saved: " << endl << fname << endl);
+               if(tryToResend){
+                  fname=writeFile(app.data2kvdir(), "kvdata_"+decoder+"_", true, kvOst.str());
+
+                  if(fname.empty()){
+                     LOGERROR("Cant save 'kvadata_" << decoder << "_' in directory: " << endl
+                              << app.data2kvdir());
+                  }else{
+                     LOGINFO("Saved: " << endl << fname << endl);
+                  }
                }
+            }else{
+               LOGINFO("Sendt observation to kvalobs!" << endl <<
+                       ost.str());
             }
-         }else{
-            LOGINFO("Sendt observation to kvalobs!" << endl <<
-                    ost.str());
          }
       }
    }
