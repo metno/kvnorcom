@@ -39,6 +39,7 @@
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
 #include <milog/milog.h>
 #include "App.h"
 #include <fstream>
@@ -54,6 +55,9 @@ using miutil::conf::ConfSection;
 using miutil::conf::ValElementList;
 using miutil::conf::ValElement;
 using miutil::conf::CIValElementList;
+
+namespace fs=boost::filesystem;
+
 
 namespace{
 volatile sig_atomic_t sigTerm=0;
@@ -119,6 +123,40 @@ getRaportConf( ConfSection   *myConf ) {
       raports.push_back( make_pair("synop", wmoraport::SYNOP ) );
 
    return raports;
+}
+
+string
+getDir( ConfSection *conf, const char *key )
+{
+   string val;
+   ValElementList valelem=conf->getValue( key );
+
+   if(valelem.size()>0) {
+      val = boost::trim_copy( valelem[0].valAsString() );
+      if( val.rbegin() != val.rend() && *val.rbegin() == '/')
+         val.erase( val.length() - 1 );
+   }
+
+   return val;
+}
+
+bool
+createDir( const std::string &dir )
+{
+   try {
+      if( ! fs::exists( dir ) ) {
+         fs::create_directories( dir );
+      }
+
+      if( ! fs::is_directory( dir ) ) {
+         LOGERROR("'" << dir <<"' exist, but is not a directory.");
+         exit( 1 );
+      }
+   }
+   catch( fs::filesystem_error &ex ) {
+      LOGERROR("Failed to create directory '" << dir << "'.");
+      exit( 1 );
+   }
 }
 
 }
@@ -188,15 +226,20 @@ App::App(int argn,
    }
 
 
+   data2kvdir_=getDir(myConf, "workdir");
 
-   data2kvdir_ = kvPath("localstatedir", "norcom2kv")+"/data2kv/";
-   tmpdir_     = kvPath("localstatedir","norcom2kv") + "/tmp/";
-   logdir_     = kvPath("logdir" );
+   if( data2kvdir_.empty() )
+      data2kvdir_ = kvPath("localstatedir", "norcom2kv")+"/data2kv/";
 
-   data2kvdir_=checkdir(data2kvdir_, true);
-   tmpdir_=checkdir(tmpdir_, true);
-   logdir_=checkdir(logdir_, true);
+   tmpdir_  = data2kvdir_ + "/tmp/";
+   logdir_  = getDir(myConf, "logdir");
 
+   if( logdir_.empty() )
+      logdir_   = kvPath("logdir" );
+
+   createDir( data2kvdir_ );
+   createDir( tmpdir_ );
+   createDir( logdir_ );
 
    if(myConf){
       valelem=myConf->getValue("synopdir");
