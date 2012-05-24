@@ -89,15 +89,6 @@ class WMORaport{
 
   std::string error(){ return errorStr.str();}
 
-  MsgMap synop()const{ return synop_;}
-  MsgMap temp()const { return temp_;}
-  MsgMap metar()const{ return metar_;}
-  MsgMap pilo()const { return pilo_;}
-  MsgMap arep()const { return arep_;}
-  MsgMap drau()const { return drau_;}
-  MsgMap bath()const { return bath_;}
-  MsgMap tide()const { return tide_;}
-
   MsgMapsList getRaports( const std::list<wmoraport::WmoRaport> &raports )const;
 
   friend std::ostream& operator<<(std::ostream& output,
