@@ -51,18 +51,24 @@ class WMORaport{
   typedef std::map<wmoraport::WmoRaport,const MsgMap*>  MsgMapsList;
 
  protected:
-  typedef enum{START, ENDMSG, TYPE, BL,
-		 SYNOP, METAR, TEMP, PILO,AREP, DRAU, BATH, TIDE, 
-		 CONTINUE, ENDOFINPUT} Token;
 
-  Token getToken(std::istringstream &inputStream,
-		 std::string &buf);
+  std::string skipEmptyLines( std::istream &ist );
   void cleanCR(std::string &buf)const;
-  bool decode(std::istringstream &ist);
-  std::string tokenString(Token token);
-  void pushError(Token token, Token prevToken, const std::string &buf);
+  bool decode(std::istream &ist);
+  void dispatch( std::istream &ist );
+  bool getMessage( std::istream &ist, std::ostream &msg );
+
+  void doSYNOP( std::istream &ist, const std::string &header );
+  void doMETAR( std::istream &ist, const std::string &header );
+  void doTEMP( std::istream &ist, const std::string &header );
+  void doPILO( std::istream &ist, const std::string &header );
+  void doAREP( std::istream &ist, const std::string &header );
+  void doDRAU( std::istream &ist, const std::string &header );
+  void doBATH( std::istream &ist, const std::string &header );
+  void doTIDE( std::istream &ist, const std::string &header );
 
   std::ostringstream errorStr;
+  std::ostringstream notMatchedInGetMessage;
   int lineno;
   bool warnAsError;
   std::string putBackBuffer;

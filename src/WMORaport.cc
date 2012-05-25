@@ -34,6 +34,7 @@
 #include <sstream>
 #include <boost/regex.hpp>
 #include <boost/foreach.hpp>
+#include <boost/algorithm/string.hpp>
 #include "WMORaport.h"
 
 using namespace std;
@@ -64,7 +65,9 @@ regex zczc("^ *ZCZC *[0-9]* *");
 regex nil("[0-9A-Za-z]* *NIL[ =]*", regex::icase| regex::normal);
 //  regex nil("[0-9A-Za-z]* *NIL[ =]*");
 regex NNNN("^ *N+ *");
-regex type("^ *((AA|BB)XX *\\d*(.)* *(\\w+)*)|^ *(METAR *)");
+regex synopType("^ *(AA|BB|OO)XX +(\\d{4}.)? *(\\w+)? *");
+regex metarType("(^ *(METAR|SPECI))?(.*)");
+//regex metarType("^ *(METAR|SPECI) *");
 regex synop("^ *S(I|M|N)\\w+ +\\w+ +\\d+ *\\w*");
 regex metar("^ *S(A|P)\\w+ +\\w+ +\\d+ *\\w*");
 regex temp("^ *U(E|F|K|L|M|S|Z)\\w+ +\\w+ +\\d+ *\\w*");
@@ -78,124 +81,6 @@ regex endMsg("^ *([0-9A-Za-z/\\-\\+]| |=)* *= *");
 //regex endMsg("^ *([0-9A-Za-z/]| )* *= *");
 regex bl("^( |\t)*");
 }
-
-std::string 
-WMORaport::tokenString(WMORaport::Token token)
-{
-   switch(token){
-      case START:      return "START";
-      case ENDMSG:     return "ENDMSG";
-      case TYPE:       return "TYPE";
-      case BL:         return "BL";
-      case SYNOP:      return "SYNOP";
-      case METAR:      return "METAR";
-      case TEMP:       return "TEMP";
-      case PILO:       return "PILO";
-      case AREP:       return "AREP";
-      case DRAU:       return "DRAU";
-      case BATH:       return "BATH";
-      case TIDE:       return "TIDE";
-      case CONTINUE:   return "CONTINUE";
-      case ENDOFINPUT: return "ENDOFINPUT";
-      default:
-         return "UNKNOWN";
-   }
-}
-
-void 
-WMORaport::pushError(Token token, Token prevToken, const std::string &buf)
-{
-   errorStr << "ERROR line: " << lineno << endl
-         << "----- buf:  [" << buf << "]" << endl
-         << "----- Unexpected token: " << tokenString(token) << endl
-         << "----- Prev token:       " << tokenString(prevToken) << endl;
-}
-
-
-WMORaport::Token 
-WMORaport::getToken(std::istringstream &inputStream,
-                    std::string &buf)
-{
-   cmatch what;
-
-   buf.clear();
-
-   while(!putBackBuffer.empty() || getline(inputStream, buf)){
-
-      //This code find a 'type' that may not be alone on a line.
-      //We split out the type a generate two lines of thit one line.
-      //The next line is in the putBackBuffer
-      //
-      //Type that this logic is implmented for at the momment:
-      // 1) METAR
-      // 2) BBXX
-
-      if(!buf.empty()){
-         //putBackBuffer is empty
-
-         bool found=false;
-         string::size_type pos;
-
-         for(int i=0; splitType[i] && !found; i++){
-            pos=buf.find(splitType[i]);
-
-            if(pos!=string::npos){
-               putBackBuffer=buf.substr(pos+strlen(splitType[i]));
-               buf=buf.substr(0, pos+strlen(splitType[i]));
-
-               while(!buf.empty() && isspace(buf[0]))
-                  buf.erase(0, 1);
-
-               while(!putBackBuffer.empty() && isspace(putBackBuffer[0]))
-                  putBackBuffer.erase(0, 1);
-
-               found=true;
-            }
-         }
-      }else{
-         buf=putBackBuffer;
-         putBackBuffer.clear();
-      }
-
-
-      lineno++;
-
-      if(regex_match(buf.c_str(), what, ::zczc)){
-         continue;
-      }else if(regex_match(buf.c_str(), what, ::nil)){
-         continue;
-      }else if(regex_match(buf.c_str(), what, ::NNNN)){
-         continue;
-      }else if(regex_match(buf.c_str(), what, ::bl)){
-         return BL;
-      }else if(regex_match(buf.c_str(), what, ::type)){
-         return TYPE;
-      }else if(regex_match(buf.c_str(), what, ::synop)){
-         return SYNOP;
-      }else if(regex_match(buf.c_str(), what, ::metar)){
-         return METAR;
-      }else if(regex_match(buf.c_str(), what, ::temp)){
-         return TEMP;
-      }else if(regex_match(buf.c_str(), what, ::pilo)){
-         return PILO;
-      }else if(regex_match(buf.c_str(), what, ::arep)){
-         return AREP;
-      }else if(regex_match(buf.c_str(), what, ::drau)){
-         return DRAU;
-      }else if(regex_match(buf.c_str(), what, ::bath)){
-         return BATH;
-      }else if(regex_match(buf.c_str(), what, ::tide)){
-         return TIDE;
-      }else if(regex_match(buf.c_str(), what, ::endMsg)){
-         return ENDMSG;
-      }else{
-         return CONTINUE;
-      }
-   }
-
-   return ENDOFINPUT;
-}
-
 
 WMORaport::WMORaport(bool warnAsError_):
         warnAsError(warnAsError_)
@@ -229,146 +114,309 @@ WMORaport::operator=(const WMORaport &rhs)
    return *this;
 }
 
-bool 
-WMORaport::decode(std::istringstream &ist)
+std::string
+WMORaport::
+skipEmptyLines( std::istream &ist )
 {
-   Token token=START;
-   Token prevToken;
-   string buf;
-   ostringstream ost;
-   MsgMap  *msgMap=&errorMap_;
-   string  typeStr;
-   string  sectionName;
+   string line;
+   string tmp;
 
-   lineno=0;
+   while( getline( ist, line, '\n' ) ) {
+      tmp = boost::trim_left_copy( line );
 
-   while(token!=ENDOFINPUT){
-      prevToken=token;
-      token=getToken(ist, buf);
+      if( ! tmp.empty() )
+         break;
+   }
 
-      switch(token){
-         case START:
-            break;
-         case ENDMSG:{
-            bool error=false;
+   return line;
+}
 
-            switch(prevToken){
-               case ENDMSG:
-               case CONTINUE:
-               case TYPE:
-                  //remove space at the beginning.
-                  while(!buf.empty() && isspace(buf[0]))
-                     buf.erase(0, 1);
+void
+WMORaport::
+doSYNOP( std::istream &ist, const std::string &header )
+{
+   bool skip = false;
+   ostringstream buf;
+   string::size_type i;
+   string line;
+   string tmp;
+   cmatch what;
+   string ident;
 
-                  if(!buf.empty())
-                     ost << buf << endl;
-                  break;
-               case BL:
-                  ost << buf << endl;
-                  break;
-               default:
-                  //METAR har ofte feil. En feil som ofte opptrer
-                  //er at 'METAR' i begynnelsen av strengen mangler.
-                  //Vi kan reparere denne. Dvs legge den inn i rett
-                  //tabell
-                  if(prevToken==METAR || sectionName=="METAR"){
-                     typeStr="METAR";
-                     ost << buf << endl;
-                  }else{
-                     pushError(token, prevToken, buf);
-                     error=true;
-                  }
-            }
+   line = skipEmptyLines( ist );
 
-            if(!error)
-               (*msgMap)[typeStr].push_back(ost.str());
+   if( line.empty() )
+      return;
 
-            ost.str("");
-            break;
+   boost::trim_left( line );
+   if( ! regex_match( line.c_str(), what, ::synopType ) ){
+      boost::trim_right( line );
+
+      if( ! boost::starts_with( line, "NIL" ) )
+         cout << "ERROR [" << line << "]" << endl;
+      return;
+   }
+   ident = line;
+   if( what[1] == "OO" )
+      skip = true;
+
+
+   while( getline( ist, line, '\n') ){
+      if( ! regex_match( line.c_str(), what, ::synopType ) ){
+         i = line.find("=");
+
+         if( i != string::npos ) {
+            line.erase( i+1 );
+            buf << line << "\n";
+
+            if( ! skip )
+               synop_[ident].push_back( buf.str() );
+
+            buf.str("");
+         } else {
+            buf << line << "\n";
          }
-         case TYPE:
-            typeStr=buf;
-            ost.str("");
-            break;
-         case BL:
-            if(!ost.str().empty()){
-               if(warnAsError){
-                  errorStr << "ERROR line: " << lineno-1 << endl
-                        << "----- Missing '=' " << endl;
-               }
-
-               buf=ost.str();
-
-               string::size_type i=buf.find_last_of("\n");
-
-               if(i!=string::npos && (i+1)==buf.length())
-                  buf.insert(i, "=");
-               else
-                  buf.append("=");
-
-               (*msgMap)[typeStr].push_back(buf);
-            }
-            ost.str("");
-            break;
-         case SYNOP:
-            sectionName="SYNOP";
-            msgMap=&synop_;
-            ost.str("");
-            break;
-         case METAR:
-            sectionName="METAR";
-            msgMap=&metar_;
-            ost.str("");
-            break;
-         case TEMP:
-            sectionName="TEMP";
-            msgMap=&temp_;
-            ost.str("");
-            break;
-         case PILO:
-            sectionName="PILO";
-            msgMap=&pilo_;
-            ost.str("");
-            break;
-         case AREP:
-            sectionName="AREP";
-            msgMap=&arep_;
-            ost.str("");
-            break;
-         case DRAU:
-            sectionName="DRAU";
-            msgMap=&drau_;
-            ost.str("");
-            break;
-         case BATH:
-            sectionName="BATH";
-            msgMap=&bath_;
-            ost.str("");
-            break;
-         case TIDE:
-            sectionName="TIDE";
-            msgMap=&tide_;
-            ost.str("");
-            break;
-         case CONTINUE:
-            ost << buf << endl;
-            break;
-         case ENDOFINPUT:
-            if(!ost.str().empty()){
-               //ost << "=" << endl;
-               (*msgMap)[typeStr].push_back(ost.str());
-            }
-            break;
-         default:
-            errorStr << "ERROR line: " << lineno << endl
-            << "----- UNKNOWN token from <getToken> " << endl;
-            break;
+      } else {
+         //New ident. I am uncertain if this is allowed, but
+         //there is bulentines where this happend.
+         ident = line;
+         if( what[1] == "OO" )
+              skip = true; //SYNOP mobile
+         else
+            skip = false;
       }
    }
 
+   //Check if we have one left over without an = at the end.
+   if( ! skip ) {
+      line = buf.str();
+      if( ! line.empty() ) {
+         line += "=";
+         synop_[ident].push_back( line );
+      }
+   }
+}
+
+void
+WMORaport::
+doMETAR( std::istream &ist, const std::string &header )
+{
+   ostringstream buf;
+   string::size_type i;
+   string line;
+   cmatch what;
+   string ident;
+
+   line = skipEmptyLines( ist );
+
+   if( line.empty() )
+      return;
+
+
+   do {
+      if( ! regex_match( line.c_str(), what, ::metarType ) ){
+         boost::trim_right( line );
+
+         if( ! boost::starts_with( line, "NIL" ) )
+            cout << "ERROR [" << line << "]" << endl;
+      }else {
+         if( what[2].length() != 0 )
+            ident = what[2];
+
+         line = what[3];
+         boost::trim_right( line );
+
+         if( line.empty() )
+            continue;
+
+         i = line.find("=");
+
+         if( i != string::npos ) {
+            line.erase( i+1 );
+            buf << line << "\n";
+            metar_[ident].push_back( buf.str() );
+            buf.str("");
+         } else {
+            buf << line << "\n";
+         }
+      }
+   } while( getline( ist, line, '\n') );
+
+   //Check if we have one left over without an = at the end.
+   line = buf.str();
+   if( ! line.empty() ) {
+      line += "=";
+      metar_[ident].push_back( line );
+   }
+
+}
+
+void
+WMORaport::
+doTEMP( std::istream &ist, const std::string &header )
+{
+   cout << "doTEMP: " << header << endl;
+   //NOT implmented
+}
+
+void
+WMORaport::
+doPILO( std::istream &ist, const std::string &header )
+{
+   cout << "doPILO: " << header << endl;
+   //NOT implmented
+}
+
+void
+WMORaport::
+doAREP( std::istream &ist, const std::string &header )
+{
+   cout << "doAREP: " << header << endl;
+   //NOT implmented
+}
+
+void
+WMORaport::
+doDRAU( std::istream &ist, const std::string &header )
+{
+   cout << "doDRAU: " << header << endl;
+   //NOT implmented
+}
+
+void
+WMORaport::
+doBATH( std::istream &ist, const std::string &header )
+{
+   cout << "doBATH: " << header << endl;
+   //NOT implmented
+}
+
+void
+WMORaport::
+doTIDE( std::istream &ist, const std::string &header )
+{
+   cout << "doTIDE: " << header << endl;
+   //NOT implmented
+}
+
+
+void
+WMORaport::
+dispatch( std::istream &ist )
+{
+   cmatch what;
+   string buf;
+
+   //Skip blank lines at the beginning.
+   buf = skipEmptyLines( ist );
+
+   if( buf.empty() )
+      return;
+
+   boost::trim_left( buf );
+
+   if(regex_match(buf.c_str(), what, ::synop)){
+      return doSYNOP( ist, buf );
+   }else if(regex_match(buf.c_str(), what, ::metar)){
+      return doMETAR( ist, buf );
+   }else if(regex_match(buf.c_str(), what, ::temp)){
+      return doTEMP( ist, buf );
+   }else if(regex_match(buf.c_str(), what, ::pilo)){
+      return doPILO( ist, buf );
+   }else if(regex_match(buf.c_str(), what, ::arep)){
+      return doAREP( ist, buf );
+   }else if(regex_match(buf.c_str(), what, ::drau)){
+      return doDRAU( ist, buf );
+   }else if(regex_match(buf.c_str(), what, ::bath)){
+      return doBATH( ist, buf );
+   }else if(regex_match(buf.c_str(), what, ::tide)){
+      return doTIDE( ist, buf );
+   }else {
+      //Unknown bulentin
+   }
+}
+
+
+bool
+WMORaport::
+getMessage( std::istream &ist, std::ostream &msg )
+{
+   cmatch what;
+   string line;
+   string buf;
+   bool zczcFound=false;
+   int nEmpty;
+
+   //Search for the start of message (ZCZC nnn).
+   //nnnn is optional.
+   while( ! zczcFound &&  getline( ist, line, '\n' ) ) {
+      ++lineno;
+      if(! regex_match( line.c_str(), what, ::zczc)) {
+         notMatchedInGetMessage << line << "\n";
+         continue;
+      }
+      zczcFound = true;
+   }
+
+   if( ! zczcFound )
+      return false;
+
+   nEmpty = 0;
+
+   //Search for the end mark (NNNN).
+   while( getline( ist, line ) ) {
+      ++lineno;
+      buf = boost::trim_copy( line );
+
+      if( buf.empty() ) {
+         ++nEmpty;
+         continue;
+      }
+
+      if( buf == "NNNN" && nEmpty > 0 )
+         return true;
+
+      if( nEmpty > 0 ) {
+         msg << string( nEmpty, '\n');
+         nEmpty = 0;
+      }
+
+      msg << line << "\n";
+   }
+
+   //We have reached the end of the input stream
+   //without finding the end mark (NNNN). We
+   //pretend the end mark i found and return true
+   //anyway.
    return true;
 }
 
+bool
+WMORaport::
+decode(std::istream &ist)
+{
+   stringstream msg;
+   string buf;
+   int i=0;
+
+   notMatchedInGetMessage.str("");
+
+   while( getMessage( ist, msg ) ){
+      dispatch( msg );
+      msg.clear();
+      msg.str("");
+      ++i;
+   }
+
+   string error=boost::trim_copy( notMatchedInGetMessage.str() );
+
+   if( ! error.empty() ) {
+      cout << " ----- BEGIN NOT MATCHED ---- " << endl;
+      cout << notMatchedInGetMessage.str() << endl;
+      cout << " ----- END NOT MATCHED ---- " << endl;
+   }
+
+}
 
 bool
 WMORaport::split(const std::string &raport)
@@ -440,7 +488,7 @@ operator<<(std::ostream& output,
    for(itm=r.metar_.begin();
          itm!=r.metar_.end();
          itm++){
-      output << itm->first << endl;
+      output << "<<" << itm->first <<">>"<< endl;
       for(itl=itm->second.begin();
             itl!=itm->second.end();
             itl++){
