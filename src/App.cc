@@ -439,6 +439,7 @@ App::lookUpKvData(bool forceNS,
       return Data::_nil();
    }
 
+   ptr = it->ref();
 
    usedNS=false;
 
@@ -461,7 +462,7 @@ App::lookUpKvData(bool forceNS,
          return ptr;
       }
 
-      if(CORBA::is_nil(obj))
+      if(CORBA::is_nil(ptr))
          forceNS=true;
       else
          return it->ref();
