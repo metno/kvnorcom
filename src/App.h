@@ -54,7 +54,7 @@ private:
   std::string logdir_;
   TKvDataSrcList refDataList;
   bool          debug_;
-  std::list< std::pair<std::string, wmoraport::WmoRaport> > raports;
+  RaportDef  raports;
 
   void initLogger(const std::string &ll, const std::string &tl);
 
@@ -119,7 +119,7 @@ private:
    std::string tmpdir()const {return tmpdir_;}
    std::string data2kvdir()const {return data2kvdir_;}
    std::string synopdir()const{ return synopdir_;}
-   std::list<wmoraport::WmoRaport> getRaportsToCollect()const;
+   wmoraport::WmoRaports getRaportsToCollect()const;
    std::string getDecoder( wmoraport::WmoRaport raportType ) const;
 };
 

@@ -409,7 +409,7 @@ CollectSynop::doNewObs(const std::string &obsFileName, const std::string &obs)
 
    WMORaport wmoRaport;
 
-   if(!wmoRaport.split(obs)){
+   if( ! wmoRaport.split(obs, app.getRaportsToCollect() ) ){
       ostringstream ost;
       std::string fname;
       fname=writeFile(app.logdir()+"norcom2kv/", "dataerror_"+filename+"_" , true, obs);

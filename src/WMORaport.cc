@@ -32,6 +32,7 @@
 #include <string>
 #include <iostream>
 #include <sstream>
+#include <algorithm>
 #include <boost/regex.hpp>
 #include <boost/foreach.hpp>
 #include <boost/algorithm/string.hpp>
@@ -59,27 +60,21 @@ using namespace boost;
 
 
 namespace{
-const char *splitType[]={"METAR", "BBXX", 0};
 
-regex zczc("^ *ZCZC *[0-9]* *");
-regex nil("[0-9A-Za-z]* *NIL[ =]*", regex::icase| regex::normal);
-//  regex nil("[0-9A-Za-z]* *NIL[ =]*");
-regex NNNN("^ *N+ *");
+regex zczc("^ *ZCZC *[0-9]*\\r+");
 regex synopType("^ *(AA|BB|OO)XX +(\\d{4}.)? *(\\w+)? *");
 regex metarType("(^ *(METAR|SPECI))?(.*)");
 //regex metarType("^ *(METAR|SPECI) *");
-regex synop("^ *S(I|M|N)\\w+ +\\w+ +\\d+ *\\w*");
-regex metar("^ *S(A|P)\\w+ +\\w+ +\\d+ *\\w*");
-regex temp("^ *U(E|F|K|L|M|S|Z)\\w+ +\\w+ +\\d+ *\\w*");
-regex pilo("^ *U(G|H|I|P|Q|Y)\\w+ +\\w+ +\\d+ *\\w*");
-regex arep("^ *U(A|D)\\w+ +\\w+ +\\d+ *\\w*");
-regex drau("^ *SS\\w+ +\\w+ +\\d+ *\\w*");
-regex bath("^ *SO\\w+ +\\w+ +\\d+ *\\w*");
-regex tide("^ *ISRZ\\w+ +\\w+ +\\d+ *\\w*");
-regex endMsg("^ *([0-9A-Za-z/\\-\\+]| |=)* *= *");
-//regex endMsg("^.*= .*");
-//regex endMsg("^ *([0-9A-Za-z/]| )* *= *");
-regex bl("^( |\t)*");
+regex synop("^ *S(I|M|N)\\w{4} +\\w+ +\\d+ *\\w*");
+regex metar("^ *S(A|P)\\w{4} +\\w+ +\\d+ *\\w*");
+regex temp("^ *U(E|F|K|L|M|S|Z)\\w{4} +\\w+ +\\d+ *\\w*");
+regex pilo("^ *U(G|H|I|P|Q|Y)\\w{4} +\\w+ +\\d+ *\\w*");
+regex arep("^ *U(A|D)\\w{4} +\\w+ +\\d+ *\\w*");
+regex drau("^ *SS\\w{4} +\\w+ +\\d+ *\\w*");
+regex bath("^ *SO\\w{4} +\\w+ +\\d+ *\\w*");
+regex tide("^ *ISRZ\\w{2}+ +\\w+ +\\d+ *\\w*");
+regex bufrSurface("^ *IS(I|M|N)\\w{3} +\\w+ +\\d+ *\\w*");
+
 }
 
 WMORaport::WMORaport(bool warnAsError_):
@@ -131,6 +126,7 @@ skipEmptyLines( std::istream &ist )
    return line;
 }
 
+
 void
 WMORaport::
 doSYNOP( std::istream &ist, const std::string &header )
@@ -142,34 +138,24 @@ doSYNOP( std::istream &ist, const std::string &header )
    string tmp;
    cmatch what;
    string ident;
+   bool first=true;
 
    line = skipEmptyLines( ist );
 
    if( line.empty() )
       return;
 
-   boost::trim_left( line );
-   if( ! regex_match( line.c_str(), what, ::synopType ) ){
+   do {
       boost::trim_right( line );
-
-      if( ! boost::starts_with( line, "NIL" ) )
-         cout << "ERROR [" << line << "]" << endl;
-      return;
-   }
-   ident = line;
-   if( what[1] == "OO" )
-      skip = true;
-
-
-   while( getline( ist, line, '\n') ){
       if( ! regex_match( line.c_str(), what, ::synopType ) ){
+
          i = line.find("=");
 
          if( i != string::npos ) {
-            line.erase( i+1 );
+            line.erase( i+1 ); //Clean eventually rubbish from the end.
             buf << line << "\n";
 
-            if( ! skip )
+            if( ! skip && ! ident.empty()  )
                synop_[ident].push_back( buf.str() );
 
             buf.str("");
@@ -177,24 +163,37 @@ doSYNOP( std::istream &ist, const std::string &header )
             buf << line << "\n";
          }
       } else {
-         //New ident. I am uncertain if this is allowed, but
-         //there is bulentines where this happend.
+         buf.str();
          ident = line;
          if( what[1] == "OO" )
               skip = true; //SYNOP mobile
          else
             skip = false;
       }
-   }
+   }while( getline( ist, line, '\n') );
 
    //Check if we have one left over without an = at the end.
    if( ! skip ) {
       line = buf.str();
-      if( ! line.empty() ) {
-         line += "=";
-         synop_[ident].push_back( line );
+      if( ! line.empty() )
+         synop_[ident].push_back( line + "=" );
+   }
+
+   //Remove all elements with an empty key in synop_. This
+   //are garbage. We test the key after we have trimmed it.
+
+   MsgMap::iterator itTmp;
+   MsgMap::iterator it=synop_.begin();
+   while( it != synop_.end() ) {
+      if( boost::trim_copy(it->first) == "" ) {
+         itTmp = it;
+         ++it;
+         synop_.erase( itTmp );
+      }else {
+         ++it;
       }
    }
+
 }
 
 void
@@ -255,50 +254,63 @@ void
 WMORaport::
 doTEMP( std::istream &ist, const std::string &header )
 {
-   cout << "doTEMP: " << header << endl;
-   //NOT implmented
+   errorStr << "TEMP: not implemented: " << header << endl;
 }
 
 void
 WMORaport::
 doPILO( std::istream &ist, const std::string &header )
 {
-   cout << "doPILO: " << header << endl;
-   //NOT implmented
+   errorStr << "PILO: not implemented: " << header << endl;
 }
 
 void
 WMORaport::
 doAREP( std::istream &ist, const std::string &header )
 {
-   cout << "doAREP: " << header << endl;
-   //NOT implmented
+   errorStr << "AREP: not implemented: " << header << endl;
 }
 
 void
 WMORaport::
 doDRAU( std::istream &ist, const std::string &header )
 {
-   cout << "doDRAU: " << header << endl;
-   //NOT implmented
+   errorStr << "DRAU: not implemented: " << header << endl;
 }
 
 void
 WMORaport::
 doBATH( std::istream &ist, const std::string &header )
 {
-   cout << "doBATH: " << header << endl;
-   //NOT implmented
+   errorStr << "BATH: not implemented: " << header << endl;
 }
 
 void
 WMORaport::
 doTIDE( std::istream &ist, const std::string &header )
 {
-   cout << "doTIDE: " << header << endl;
-   //NOT implmented
+   errorStr << "TIDE: not implemented: " << header << endl;
 }
 
+void
+WMORaport::
+doBUFR_SURFACE( std::istream &ist, const std::string &header )
+{
+   errorStr << "BUFR (SURFACE): not implemented: " << header << endl;
+}
+
+
+void
+WMORaport::
+doDispatch( doRaport func, wmoraport::WmoRaport raportType,
+            std::istream &ist,  const string &header )
+{
+   if( ! raportsToCollect.empty() &&
+         raportsToCollect.find( raportType ) == raportsToCollect.end() )
+      return;
+
+   (this->*func)( ist, header );
+}
 
 void
 WMORaport::
@@ -313,30 +325,57 @@ dispatch( std::istream &ist )
    if( buf.empty() )
       return;
 
-   boost::trim_left( buf );
+   boost::trim( buf );
 
    if(regex_match(buf.c_str(), what, ::synop)){
-      return doSYNOP( ist, buf );
+      return doDispatch( &WMORaport::doSYNOP, wmoraport::SYNOP,
+                         ist, buf );
    }else if(regex_match(buf.c_str(), what, ::metar)){
-      return doMETAR( ist, buf );
+      return doDispatch( &WMORaport::doMETAR, wmoraport::METAR,
+                         ist, buf );
    }else if(regex_match(buf.c_str(), what, ::temp)){
-      return doTEMP( ist, buf );
+      return doDispatch( &WMORaport::doTEMP, wmoraport::TEMP,
+                         ist, buf );
    }else if(regex_match(buf.c_str(), what, ::pilo)){
-      return doPILO( ist, buf );
+      return doDispatch( &WMORaport::doPILO, wmoraport::PILO,
+                         ist, buf );
    }else if(regex_match(buf.c_str(), what, ::arep)){
-      return doAREP( ist, buf );
+      return doDispatch( &WMORaport::doAREP, wmoraport::AREP,
+                         ist, buf );
    }else if(regex_match(buf.c_str(), what, ::drau)){
-      return doDRAU( ist, buf );
+      return doDispatch( &WMORaport::doDRAU, wmoraport::DRAU,
+                         ist, buf );
    }else if(regex_match(buf.c_str(), what, ::bath)){
-      return doBATH( ist, buf );
+      return doDispatch( &WMORaport::doBATH, wmoraport::BATH,
+                         ist, buf );
    }else if(regex_match(buf.c_str(), what, ::tide)){
-      return doTIDE( ist, buf );
+      return doDispatch( &WMORaport::doTIDE, wmoraport::TIDE,
+                         ist, buf );
+   }else if(regex_match(buf.c_str(), what, ::tide)){
+      return doDispatch( &WMORaport::doBUFR_SURFACE, wmoraport::BUFR_SURFACE,
+                         ist, buf );
    }else {
+      errorStr << "UNKNOWN: bulletin: " << buf << endl;
       //Unknown bulentin
    }
 }
 
 
+
+/**
+ * A message starts with the sequence "ZCZC nnn\r\r\n" or
+ * "ZCZC\r\r\n", ie nnn is optional. nnn represent a sequence
+ * number in which the message are sendt.
+ *
+ * A message ends with the sequence "\n\n\n\n\n\n\nNNNN\r\r\n"
+ *
+ * The routine collects all data between the start sequence
+ * and end sequence, excluding the sequence itself, and returns
+ * the data in param msg.
+ *
+ * @param ist the input stream to collect data from.
+ * @param[out] msg the collected data.
+ */
 bool
 WMORaport::
 getMessage( std::istream &ist, std::ostream &msg )
@@ -344,6 +383,7 @@ getMessage( std::istream &ist, std::ostream &msg )
    cmatch what;
    string line;
    string buf;
+   ostringstream empty;
    bool zczcFound=false;
    int nEmpty;
 
@@ -358,7 +398,7 @@ getMessage( std::istream &ist, std::ostream &msg )
       zczcFound = true;
    }
 
-   if( ! zczcFound )
+   if( ! zczcFound ) //Possibly the end of stream
       return false;
 
    nEmpty = 0;
@@ -369,15 +409,18 @@ getMessage( std::istream &ist, std::ostream &msg )
       buf = boost::trim_copy( line );
 
       if( buf.empty() ) {
+         empty << line << '\n';
          ++nEmpty;
          continue;
       }
 
-      if( buf == "NNNN" && nEmpty > 0 )
+      //We are a bit tolerant here in
+      if( buf == "NNNN" && nEmpty > 4 && nEmpty <= 8 )
          return true;
 
       if( nEmpty > 0 ) {
-         msg << string( nEmpty, '\n');
+         msg << empty.str();
+         empty.str("");
          nEmpty = 0;
       }
 
@@ -411,41 +454,25 @@ decode(std::istream &ist)
    string error=boost::trim_copy( notMatchedInGetMessage.str() );
 
    if( ! error.empty() ) {
-      cout << " ----- BEGIN NOT MATCHED ---- " << endl;
-      cout << notMatchedInGetMessage.str() << endl;
-      cout << " ----- END NOT MATCHED ---- " << endl;
+      errorStr << " ----- BEGIN NOT MATCHED ---- " << endl;
+      errorStr << notMatchedInGetMessage.str() << endl;
+      errorStr << " ----- END NOT MATCHED ---- " << endl;
    }
 
 }
 
 bool
-WMORaport::split(const std::string &raport)
+WMORaport::split(const std::string &raport,
+                 const wmoraport::WmoRaports &collectRaports )
 {
    std::istringstream inputStream;
    string msg(raport);
 
    errorStr.str("");
-   cleanCR(msg);
+//   cleanCR(msg);
    inputStream.str(msg);
-
+   raportsToCollect = collectRaports;
    return decode(inputStream);
-}
-
-
-
-
-
-void 
-WMORaport::cleanCR(std::string &buf)const
-{
-   string::size_type i;
-
-   i=buf.find('\r', 0);
-
-   while(i!=string::npos){
-      buf.erase(i, 1);
-      i=buf.find('\r', i);
-   }
 }
 
 
@@ -588,7 +615,7 @@ operator<<(std::ostream& output,
 
 WMORaport::MsgMapsList
 WMORaport::
-getRaports( const std::list<wmoraport::WmoRaport> &raports )const
+getRaports( const wmoraport::WmoRaports &raports )const
 {
    MsgMapsList ret;
 
@@ -602,6 +629,7 @@ getRaports( const std::list<wmoraport::WmoRaport> &raports )const
          case wmoraport::SYNOP: ret[wmoraport::SYNOP] = &synop_; break;
          case wmoraport::TEMP: ret[wmoraport::TEMP] = &temp_; break;
          case wmoraport::TIDE: ret[wmoraport::TIDE] = &tide_ ; break;
+         case wmoraport::BUFR_SURFACE: ret[wmoraport::BUFR_SURFACE] = &bufrSurface_; break;
          default:
             continue;
       }

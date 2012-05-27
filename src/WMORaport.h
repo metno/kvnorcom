@@ -32,11 +32,14 @@
 #define __WMORaport_h__
 #include <map> 
 #include <list>
+#include <set>
 #include <string>
 #include <sstream>
 
 namespace wmoraport {
-typedef enum{SYNOP, METAR, TEMP, PILO,AREP, DRAU, BATH, TIDE} WmoRaport;
+typedef enum{SYNOP, METAR, TEMP, PILO,AREP, DRAU, BATH, TIDE,
+             BUFR_SURFACE} WmoRaport;
+typedef std::set<WmoRaport> WmoRaports;
 }
 
 
@@ -51,13 +54,14 @@ class WMORaport{
   typedef std::map<wmoraport::WmoRaport,const MsgMap*>  MsgMapsList;
 
  protected:
+  typedef void (WMORaport::*doRaport)( std::istream &ist, const std::string &header );
 
   std::string skipEmptyLines( std::istream &ist );
-  void cleanCR(std::string &buf)const;
   bool decode(std::istream &ist);
   void dispatch( std::istream &ist );
   bool getMessage( std::istream &ist, std::ostream &msg );
-
+  void doDispatch( doRaport func, wmoraport::WmoRaport raportType,
+                   std::istream &ist,  const std::string &header );
   void doSYNOP( std::istream &ist, const std::string &header );
   void doMETAR( std::istream &ist, const std::string &header );
   void doTEMP( std::istream &ist, const std::string &header );
@@ -66,12 +70,12 @@ class WMORaport{
   void doDRAU( std::istream &ist, const std::string &header );
   void doBATH( std::istream &ist, const std::string &header );
   void doTIDE( std::istream &ist, const std::string &header );
+  void doBUFR_SURFACE( std::istream &ist, const std::string &header );
 
   std::ostringstream errorStr;
   std::ostringstream notMatchedInGetMessage;
   int lineno;
   bool warnAsError;
-  std::string putBackBuffer;
 
   MsgMap synop_;
   MsgMap temp_;
@@ -81,7 +85,10 @@ class WMORaport{
   MsgMap drau_;
   MsgMap bath_;
   MsgMap tide_;
+  MsgMap bufrSurface_;
   MsgMap errorMap_;
+
+  wmoraport::WmoRaports raportsToCollect;
 
 
  public:
@@ -91,11 +98,12 @@ class WMORaport{
 
   WMORaport& operator=(const WMORaport &rhs);
 
-  bool split(const std::string &raport);
+  bool split(const std::string &raport,
+             const wmoraport::WmoRaports &collectRaports=wmoraport::WmoRaports() );
 
   std::string error(){ return errorStr.str();}
 
-  MsgMapsList getRaports( const std::list<wmoraport::WmoRaport> &raports )const;
+  MsgMapsList getRaports( const wmoraport::WmoRaports &raports )const;
 
   friend std::ostream& operator<<(std::ostream& output,
 				  const WMORaport& r);

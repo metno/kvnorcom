@@ -574,14 +574,14 @@ App::inShutdown()const
 }
 
 
-std::list<wmoraport::WmoRaport>
+wmoraport::WmoRaports
 App::
 getRaportsToCollect()const
 {
-   std::list<wmoraport::WmoRaport> ret;
+   wmoraport::WmoRaports ret;
 
    BOOST_FOREACH( RaportDefValue v, raports) {
-      ret.push_back( v.second );
+      ret.insert( v.second );
    }
 
    return ret;

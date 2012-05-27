@@ -30,8 +30,9 @@
 */
 #include <iostream> 
 #include <fstream>
-#include "WMORaport.h"
 #include <sstream>
+#include <boost/assign.hpp>
+#include "WMORaport.h"
 
 using namespace std;
 
@@ -41,6 +42,7 @@ readFile(const std::string &filename, std::string &content);
 int
 main(int argn, char **argv)
 {
+   wmoraport::WmoRaports whatToCollect;
   WMORaport wmo;
   string    raport;
 
@@ -56,7 +58,9 @@ main(int argn, char **argv)
 
   //  cout << raport;
   
-  if(!wmo.split(raport)){
+  boost::assign::insert( whatToCollect )(wmoraport::SYNOP)(wmoraport::METAR);
+
+  if(!wmo.split(raport, whatToCollect )){
     cerr << wmo.error() << endl;
   }
  
