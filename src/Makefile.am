@@ -26,7 +26,7 @@ norcom2kv_LDADD = $(kvcpp_LIBS) \
                   -lm -ldl 
 
 testWMORaport_SOURCES = \
-	testWMORaport.cc testWMORaport.h \
+	testWMORaport.cc \
 	WMORaport.cc WMORaport.h 
 
 testWMORaport_CPPFLAGS = $(AM_CPPFLAGS)
