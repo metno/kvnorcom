@@ -63,7 +63,7 @@ namespace{
 
 regex zczc("^ *ZCZC *[0-9]*\\r+");
 regex synopType("^ *(AA|BB|OO)XX +(\\d{4}.)? *(\\w+)? *");
-regex synopIsNil("(^ *\\d+ +NIL *=");
+regex synopIsNil("^ *\\d+ *NIL *=");
 regex metarType("(^ *(METAR|SPECI))?(.*)");
 //regex metarType("^ *(METAR|SPECI) *");
 regex synop("^ *S(I|M|N)\\w{4} +\\w+ +\\d+ *\\w*");
