@@ -63,7 +63,7 @@ namespace{
 
 regex zczc("^ *ZCZC *[0-9]*\\r+");
 regex synopType("^ *(AA|BB|OO)XX +(\\d{4}.)? *(\\w+)? *");
-regex synopIsNil("^\\h*\\d+ *NIL\\h*=?\\h*");
+regex synopIsNil("^\\s*\\d+ *NIL *=?\\s*");
 regex metarType("(^ *(METAR|SPECI))?(.*)");
 //regex metarType("^ *(METAR|SPECI) *");
 regex synop("^ *S(I|M|N)\\w{4} +\\w+ +\\d+ *\\w*");
@@ -158,7 +158,7 @@ doSYNOP( std::istream &ist, const std::string &header )
 
             if( ! skip && ! ident.empty()  ) {
                line=buf.str();
-               boost::trim_left( line );
+               boost::trim( line );
                if( ! regex_match( line.c_str(), what, ::synopIsNil ) )
                   synop_[ident].push_back( line );
             }
@@ -181,7 +181,7 @@ doSYNOP( std::istream &ist, const std::string &header )
    if( ! skip ) {
       line = buf.str();
       if( ! line.empty() ) {
-         boost::trim_left( line );
+         boost::trim( line );
          line +="=";
          if( ! regex_match( line.c_str(), what, ::synopIsNil ) )
             synop_[ident].push_back( line );
@@ -243,7 +243,7 @@ doMETAR( std::istream &ist, const std::string &header )
             line.erase( i+1 );
             buf << line << "\n";
             line=buf.str();
-            boost::trim_left( line );
+            boost::trim( line );
             metar_[ident].push_back( line );
             buf.str("");
          } else {
@@ -256,7 +256,7 @@ doMETAR( std::istream &ist, const std::string &header )
    line = buf.str();
    if( ! line.empty() ) {
       line += "=";
-      boost::trim_left( line );
+      boost::trim( line );
       metar_[ident].push_back( line );
    }
 
