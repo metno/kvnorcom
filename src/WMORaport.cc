@@ -157,9 +157,10 @@ doSYNOP( std::istream &ist, const std::string &header )
             buf << line << "\n";
 
             if( ! skip && ! ident.empty()  ) {
+               line=buf.str();
                boost::trim_left( line );
                if( ! regex_match( line.c_str(), what, ::synopIsNil ) )
-                  synop_[ident].push_back( buf.str() );
+                  synop_[ident].push_back( line );
             }
 
             buf.str("");
@@ -181,7 +182,9 @@ doSYNOP( std::istream &ist, const std::string &header )
       line = buf.str();
       if( ! line.empty() ) {
          boost::trim_left( line );
-         synop_[ident].push_back( line + "=" );
+         line +="=";
+         if( ! regex_match( line.c_str(), what, ::synopIsNil ) )
+            synop_[ident].push_back( line );
       }
    }
 
@@ -239,8 +242,9 @@ doMETAR( std::istream &ist, const std::string &header )
          if( i != string::npos ) {
             line.erase( i+1 );
             buf << line << "\n";
-            boost::trim_left( buf );
-            metar_[ident].push_back( buf.str() );
+            line=buf.str();
+            boost::trim_left( line );
+            metar_[ident].push_back( line );
             buf.str("");
          } else {
             buf << line << "\n";
