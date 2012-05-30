@@ -127,7 +127,7 @@ skipEmptyLines( std::istream &ist )
 }
 
 
-void
+bool
 WMORaport::
 doSYNOP( std::istream &ist, const std::string &header )
 {
@@ -143,7 +143,7 @@ doSYNOP( std::istream &ist, const std::string &header )
    line = skipEmptyLines( ist );
 
    if( line.empty() )
-      return;
+      return true;
 
    do {
       boost::trim_right( line );
@@ -193,10 +193,10 @@ doSYNOP( std::istream &ist, const std::string &header )
          ++it;
       }
    }
-
+   return true;
 }
 
-void
+bool
 WMORaport::
 doMETAR( std::istream &ist, const std::string &header )
 {
@@ -209,7 +209,7 @@ doMETAR( std::istream &ist, const std::string &header )
    line = skipEmptyLines( ist );
 
    if( line.empty() )
-      return;
+      return true;
 
 
    do {
@@ -250,69 +250,75 @@ doMETAR( std::istream &ist, const std::string &header )
 
 }
 
-void
+bool
 WMORaport::
 doTEMP( std::istream &ist, const std::string &header )
 {
    errorStr << "TEMP: not implemented: " << header << endl;
+   return true;
 }
 
-void
+bool
 WMORaport::
 doPILO( std::istream &ist, const std::string &header )
 {
    errorStr << "PILO: not implemented: " << header << endl;
 }
 
-void
+bool
 WMORaport::
 doAREP( std::istream &ist, const std::string &header )
 {
    errorStr << "AREP: not implemented: " << header << endl;
+   return true;
 }
 
-void
+bool
 WMORaport::
 doDRAU( std::istream &ist, const std::string &header )
 {
    errorStr << "DRAU: not implemented: " << header << endl;
+   return true;
 }
 
-void
+bool
 WMORaport::
 doBATH( std::istream &ist, const std::string &header )
 {
    errorStr << "BATH: not implemented: " << header << endl;
+   return true;
 }
 
-void
+bool
 WMORaport::
 doTIDE( std::istream &ist, const std::string &header )
 {
    errorStr << "TIDE: not implemented: " << header << endl;
+   return true;
 }
 
-void
+bool
 WMORaport::
 doBUFR_SURFACE( std::istream &ist, const std::string &header )
 {
    errorStr << "BUFR (SURFACE): not implemented: " << header << endl;
+   return true;
 }
 
 
-void
+bool
 WMORaport::
 doDispatch( doRaport func, wmoraport::WmoRaport raportType,
             std::istream &ist,  const string &header )
 {
    if( ! raportsToCollect.empty() &&
          raportsToCollect.find( raportType ) == raportsToCollect.end() )
-      return;
+      return true;
 
-   (this->*func)( ist, header );
+   return (this->*func)( ist, header );
 }
 
-void
+bool
 WMORaport::
 dispatch( std::istream &ist )
 {
@@ -323,7 +329,7 @@ dispatch( std::istream &ist )
    buf = skipEmptyLines( ist );
 
    if( buf.empty() )
-      return;
+      return true;
 
    boost::trim( buf );
 
@@ -356,6 +362,7 @@ dispatch( std::istream &ist )
                          ist, buf );
    }else {
       errorStr << "UNKNOWN: bulletin: " << buf << endl;
+      return true;
       //Unknown bulentin
    }
 }
@@ -439,13 +446,17 @@ WMORaport::
 decode(std::istream &ist)
 {
    stringstream msg;
-   string buf;
+   string tmp;
    int i=0;
 
    notMatchedInGetMessage.str("");
 
    while( getMessage( ist, msg ) ){
-      dispatch( msg );
+      tmp = msg.str();
+      if( ! dispatch( msg ) ) {
+         errorStr << "ERROR: can't split bulletin segment[" << endl
+               << tmp << "]" << endl;
+      }
       msg.clear();
       msg.str("");
       ++i;
@@ -458,7 +469,7 @@ decode(std::istream &ist)
       errorStr << notMatchedInGetMessage.str() << endl;
       errorStr << " ----- END NOT MATCHED ---- " << endl;
    }
-
+   return true;
 }
 
 bool

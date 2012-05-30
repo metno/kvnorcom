@@ -54,23 +54,23 @@ class WMORaport{
   typedef std::map<wmoraport::WmoRaport,const MsgMap*>  MsgMapsList;
 
  protected:
-  typedef void (WMORaport::*doRaport)( std::istream &ist, const std::string &header );
+  typedef bool (WMORaport::*doRaport)( std::istream &ist, const std::string &header );
 
   std::string skipEmptyLines( std::istream &ist );
   bool decode(std::istream &ist);
-  void dispatch( std::istream &ist );
+  bool dispatch( std::istream &ist );
   bool getMessage( std::istream &ist, std::ostream &msg );
-  void doDispatch( doRaport func, wmoraport::WmoRaport raportType,
+  bool doDispatch( doRaport func, wmoraport::WmoRaport raportType,
                    std::istream &ist,  const std::string &header );
-  void doSYNOP( std::istream &ist, const std::string &header );
-  void doMETAR( std::istream &ist, const std::string &header );
-  void doTEMP( std::istream &ist, const std::string &header );
-  void doPILO( std::istream &ist, const std::string &header );
-  void doAREP( std::istream &ist, const std::string &header );
-  void doDRAU( std::istream &ist, const std::string &header );
-  void doBATH( std::istream &ist, const std::string &header );
-  void doTIDE( std::istream &ist, const std::string &header );
-  void doBUFR_SURFACE( std::istream &ist, const std::string &header );
+  bool doSYNOP( std::istream &ist, const std::string &header );
+  bool doMETAR( std::istream &ist, const std::string &header );
+  bool doTEMP( std::istream &ist, const std::string &header );
+  bool doPILO( std::istream &ist, const std::string &header );
+  bool doAREP( std::istream &ist, const std::string &header );
+  bool doDRAU( std::istream &ist, const std::string &header );
+  bool doBATH( std::istream &ist, const std::string &header );
+  bool doTIDE( std::istream &ist, const std::string &header );
+  bool doBUFR_SURFACE( std::istream &ist, const std::string &header );
 
   std::ostringstream errorStr;
   std::ostringstream notMatchedInGetMessage;

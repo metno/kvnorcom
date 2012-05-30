@@ -3,6 +3,7 @@ norcom2kv (2.4.4~RC2-1) lucid; urgency=low
   * Totally rewrite of the scan algorithm for WMO bulletins.
     This was needed to support BUFR. A lot of bugs was
     also fixed by the rewrite. Certainly there will be new bugs :-).
+  * Fix a bug in the use of cached CORBA ref to kvDataInputd. 
   
  -- Kvalobs <kvalobs@met.no>  Sun, 27 May 2012 16:30:00 +0200
 
