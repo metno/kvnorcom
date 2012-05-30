@@ -63,6 +63,7 @@ namespace{
 
 regex zczc("^ *ZCZC *[0-9]*\\r+");
 regex synopType("^ *(AA|BB|OO)XX +(\\d{4}.)? *(\\w+)? *");
+regex synopIsNil("(^ *\\d+ +NIL *=");
 regex metarType("(^ *(METAR|SPECI))?(.*)");
 //regex metarType("^ *(METAR|SPECI) *");
 regex synop("^ *S(I|M|N)\\w{4} +\\w+ +\\d+ *\\w*");
@@ -155,8 +156,11 @@ doSYNOP( std::istream &ist, const std::string &header )
             line.erase( i+1 ); //Clean eventually rubbish from the end.
             buf << line << "\n";
 
-            if( ! skip && ! ident.empty()  )
-               synop_[ident].push_back( buf.str() );
+            if( ! skip && ! ident.empty()  ) {
+               boost::trim_left( line );
+               if( ! regex_match( line.c_str(), what, ::synopIsNil ) )
+                  synop_[ident].push_back( buf.str() );
+            }
 
             buf.str("");
          } else {
@@ -175,8 +179,10 @@ doSYNOP( std::istream &ist, const std::string &header )
    //Check if we have one left over without an = at the end.
    if( ! skip ) {
       line = buf.str();
-      if( ! line.empty() )
+      if( ! line.empty() ) {
+         boost::trim_left( line );
          synop_[ident].push_back( line + "=" );
+      }
    }
 
    //Remove all elements with an empty key in synop_. This
@@ -233,6 +239,7 @@ doMETAR( std::istream &ist, const std::string &header )
          if( i != string::npos ) {
             line.erase( i+1 );
             buf << line << "\n";
+            boost::trim_left( buf );
             metar_[ident].push_back( buf.str() );
             buf.str("");
          } else {
@@ -245,6 +252,7 @@ doMETAR( std::istream &ist, const std::string &header )
    line = buf.str();
    if( ! line.empty() ) {
       line += "=";
+      boost::trim_left( line );
       metar_[ident].push_back( line );
    }
 
