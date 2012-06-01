@@ -1,3 +1,10 @@
+norcom2kv (2.4.4~RC3-1) lucid; urgency=low 
+
+  * Code cleanup. 
+  
+ -- Kvalobs <kvalobs@met.no>  Fri, 1 Jun 2012 12:00:00 +0200
+
+
 norcom2kv (2.4.4~RC2-1) lucid; urgency=low 
 
   * Totally rewrite of the scan algorithm for WMO bulletins.
