@@ -41,7 +41,7 @@
 #include <milog/milog.h>
 #include <fileutil/dir.h>
 #include <fileutil/copyfile.h>
-#include "CollectSynop.h"
+#include "CollectWmoReports.h"
 #include "crc_ccitt.h"
 #include <puTools/miTime.h>
 #include <kvalobs/kvPath.h>
@@ -51,13 +51,13 @@ using namespace CKvalObs::CDataSource;
 using namespace miutil;
 
 
-CollectSynop::CollectSynop(App &app_)
+CollectWmoReports::CollectWmoReports(App &app_)
 :app(app_)
 {
 
 }
 
-CollectSynop::~CollectSynop()
+CollectWmoReports::~CollectWmoReports()
 {
 }
 
@@ -65,7 +65,7 @@ CollectSynop::~CollectSynop()
 
 
 bool
-CollectSynop::readFile(const std::string &file, 
+CollectWmoReports::readFile(const std::string &file, 
                        std::string &content)const
 {
    ifstream      fs(file.c_str());
@@ -99,7 +99,7 @@ CollectSynop::readFile(const std::string &file,
 */
 
 bool 
-CollectSynop::getFileList(FileList &fileList, 
+CollectWmoReports::getFileList(FileList &fileList, 
                           const std::string &path_,
                           const std::string &pattern)
 {
@@ -163,7 +163,7 @@ CollectSynop::getFileList(FileList &fileList,
 */
 
 bool
-CollectSynop::sendMessageToKvalobs(const std::string &msg,
+CollectWmoReports::sendMessageToKvalobs(const std::string &msg,
                                    const std::string &obsType,
                                    bool &kvServerIsUp,
                                    bool &tryToResend)const
@@ -220,7 +220,7 @@ CollectSynop::sendMessageToKvalobs(const std::string &msg,
 }
 
 int 
-CollectSynop::run()
+CollectWmoReports::run()
 {
    const  int DELAY=5;
    const  int RESEND_DELAY=60;
@@ -269,7 +269,7 @@ CollectSynop::run()
 }
 
 void
-CollectSynop::tryToSendSavedObservations()
+CollectWmoReports::tryToSendSavedObservations()
 {
    FileList  fileList;
    IFileList it;
@@ -342,7 +342,7 @@ CollectSynop::tryToSendSavedObservations()
 }
 
 void
-CollectSynop::collectObservations()
+CollectWmoReports::collectObservations()
 {
    IFInfoList it;
    std::string buf;
@@ -395,7 +395,7 @@ CollectSynop::collectObservations()
 }
 
 void
-CollectSynop::doNewObs(const std::string &obsFileName, const std::string &obs)
+CollectWmoReports::doNewObs(const std::string &obsFileName, const std::string &obs)
 {
    std::string err;
    string      filename(obsFileName);
@@ -483,7 +483,7 @@ CollectSynop::doNewObs(const std::string &obsFileName, const std::string &obs)
 
 
 void
-CollectSynop::sendWMORaport(const WMORaport &wmoRaports)
+CollectWmoReports::sendWMORaport(const WMORaport &wmoRaports)
 {
    ostringstream        ost;
    WMORaport::MsgMapsList raports;
@@ -534,7 +534,7 @@ CollectSynop::sendWMORaport(const WMORaport &wmoRaports)
 }
 
 std::string
-CollectSynop::writeFile(const std::string &dir, 
+CollectWmoReports::writeFile(const std::string &dir, 
                         const std::string &fname,
                         bool  fnameIsTemplate,
                         const std::string &content)
@@ -607,7 +607,7 @@ CollectSynop::writeFile(const std::string &dir,
 }
 
 std::string
-CollectSynop::getNewObsPart(const std::string &obs, IFInfoList &it)
+CollectWmoReports::getNewObsPart(const std::string &obs, IFInfoList &it)
 {
    std::string  sub;
    std::string  newObs;
@@ -649,7 +649,7 @@ CollectSynop::getNewObsPart(const std::string &obs, IFInfoList &it)
 
 
 bool
-CollectSynop::checkForNewObservations()
+CollectWmoReports::checkForNewObservations()
 {
    string    message;
    string    obsType;
@@ -738,7 +738,7 @@ CollectSynop::checkForNewObservations()
 
 
 IFInfoList 
-CollectSynop::
+CollectWmoReports::
 copyFile(FInfoList &infoList, IFInfoList it)
 {
    time_t oldtime=it->second.mtime();

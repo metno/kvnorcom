@@ -31,7 +31,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "App.h"
-#include "CollectSynop.h"
+#include "CollectWmoReports.h"
 #include <fileutil/pidfileutil.h>
 #include <milog/milog.h>
 #include "CorbaThread.h"
@@ -82,7 +82,7 @@ main(int argn, char **argv)
     }
   }
 
-  CollectSynop collectSynop(app);
+  CollectWmoReports collectSynop(app);
 
  
   pidFile.createPidFile(pidfile);

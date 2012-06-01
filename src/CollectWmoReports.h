@@ -46,11 +46,11 @@ typedef std::list<File>                   FileList;
 typedef std::list<File>::iterator        IFileList;
 typedef std::list<File>::const_iterator CIFileList;
 
-class CollectSynop
+class CollectWmoReports
 {
-    CollectSynop(CollectSynop&);
-    CollectSynop& operator=(const CollectSynop&);
-    CollectSynop();
+    CollectWmoReports(CollectWmoReports&);
+    CollectWmoReports& operator=(const CollectWmoReports&);
+    CollectWmoReports();
     
     App                             &app;
     FInfoList                       fileInfoList;
@@ -105,8 +105,8 @@ class CollectSynop
     IFInfoList copyFile(FInfoList &infoList, IFInfoList it); 
     
 public:
-    CollectSynop(App &app); 
-    ~CollectSynop();
+    CollectWmoReports(App &app); 
+    ~CollectWmoReports();
     
     int run();
 };

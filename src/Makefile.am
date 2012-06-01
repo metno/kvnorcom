@@ -6,7 +6,7 @@ AM_CPPFLAGS = -D_REENTRANT \
 bin_PROGRAMS = norcom2kv
 noinst_PROGRAMS = testWMORaport
 norcom2kv_SOURCES = norcom2kv.cc \
-                    CollectSynop.cc  CollectSynop.h \
+                    CollectWmoReports.cc CollectWmoReports.h \
                     App.cc App.h \
                     WMORaport.cc WMORaport.h \
                     crc_ccitt.cc crc_ccitt.h \
