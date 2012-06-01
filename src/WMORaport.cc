@@ -62,7 +62,7 @@ using namespace boost;
 namespace{
 
 regex zczc("^ *ZCZC *[0-9]*\\r+");
-regex synopType("^ *(AA|BB|OO)XX +(\\d{4}.)? *(\\w+)? *");
+regex synopType("(^ *((AA|BB|OO)XX +(\\d{4}.)? *(\\w+)?))?(.*)");
 regex synopIsNil("^\\s*(\\d+)? *NIL *=?\\s*");
 regex metarType("(^ *(METAR|SPECI))?(.*)");
 //regex metarType("^ *(METAR|SPECI) *");
@@ -112,16 +112,15 @@ WMORaport::operator=(const WMORaport &rhs)
 
 std::string
 WMORaport::
-skipEmptyLines( std::istream &ist )
+skipEmptyLines( std::istream &ist )const
 {
    string line;
-   string tmp;
 
    while( getline( ist, line, '\n' ) ) {
-      tmp = boost::trim_left_copy( line );
-
-      if( ! tmp.empty() )
+      if( ! boost::trim_left_copy( line ).empty() ) {
+         line += "\n";
          break;
+      }
    }
 
    return line;
@@ -130,78 +129,101 @@ skipEmptyLines( std::istream &ist )
 
 bool
 WMORaport::
-doSYNOP( std::istream &ist, const std::string &header )
+readReport( std::istream &ist, std::string &report)const
 {
-   bool skip = false;
    ostringstream buf;
    string::size_type i;
    string line;
-   string tmp;
-   cmatch what;
-   string ident;
-   bool first=true;
 
+   report.erase();
    line = skipEmptyLines( ist );
 
    if( line.empty() )
+      return false;
+
+   do {
+      boost::trim_right( line );
+      i = line.find("=");
+
+      if( i != string::npos ) {
+         line.erase( i+1 ); //Clean eventually rubbish from the end.
+         buf << line << "\n";
+         report = buf.str();
+         return true;
+      } else {
+         buf << line << "\n";
+      }
+   }while( getline( ist, line, '\n') );
+
+   line = buf.str();
+
+   if( ! boost::trim_copy( line ).empty() ) {
+      report = line + "\n";
+      return true;
+   }
+
+   return false;
+}
+
+void
+WMORaport::
+removeEmptyKeys( MsgMap &msgMap )
+{
+   MsgMap::iterator itTmp;
+   MsgMap::iterator it=msgMap.begin();
+
+   while( it != msgMap.end() ) {
+      if( boost::trim_copy(it->first) == "" ) {
+         itTmp = it;
+         ++it;
+         msgMap.erase( itTmp );
+      }else {
+         ++it;
+      }
+   }
+}
+
+
+bool
+WMORaport::
+doSYNOP( std::istream &ist, const std::string &header )
+{
+   bool skip = false;
+   string line;
+   cmatch what;
+   string ident;
+
+   if( ! readReport( ist, line ) )
       return true;
 
    do {
       boost::trim_right( line );
       if( ! regex_match( line.c_str(), what, ::synopType ) ){
-
-         i = line.find("=");
-
-         if( i != string::npos ) {
-            line.erase( i+1 ); //Clean eventually rubbish from the end.
-            buf << line << "\n";
-
-            if( ! skip && ! ident.empty()  ) {
-               line=buf.str();
-               boost::trim( line );
-               if( ! regex_match( line.c_str(), what, ::synopIsNil ) )
-                  synop_[ident].push_back( line );
-            }
-
-            buf.str("");
-         } else {
-            buf << line << "\n";
-         }
+         //This should never happend
+         continue;
       } else {
-         buf.str();
-         ident = line;
-         if( what[1] == "OO" )
-              skip = true; //SYNOP mobile
-         else
-            skip = false;
-      }
-   }while( getline( ist, line, '\n') );
+         if( what[2].length() > 0 ) {
+            ident = what[2];
+            if( what[3] == "OO" ) skip = true; //SYNOP mobile
+            else skip = false;
+         }
 
-   //Check if we have one left over without an = at the end.
-   if( ! skip ) {
-      line = buf.str();
-      if( ! line.empty() ) {
-         boost::trim( line );
-         line +="=";
-         if( ! regex_match( line.c_str(), what, ::synopIsNil ) )
-            synop_[ident].push_back( line );
-      }
-   }
+         line = what[6];
 
-   //Remove all elements with an empty key in synop_. This
-   //are garbage. We test the key after we have trimmed it.
+         if( line.empty() )
+            continue;
 
-   MsgMap::iterator itTmp;
-   MsgMap::iterator it=synop_.begin();
-   while( it != synop_.end() ) {
-      if( boost::trim_copy(it->first) == "" ) {
-         itTmp = it;
-         ++it;
-         synop_.erase( itTmp );
-      }else {
-         ++it;
+         if( ! skip && ! ident.empty()  ) {
+            boost::trim( line );
+            if( ! regex_match( line.c_str(), what, ::synopIsNil ) ){
+               synop_[ident].push_back( line );
+            }
+         }
       }
-   }
+   }while( readReport( ist, line ) );
+
+   removeEmptyKeys( synop_ );
+
    return true;
 }
 
@@ -209,57 +231,32 @@ bool
 WMORaport::
 doMETAR( std::istream &ist, const std::string &header )
 {
-   ostringstream buf;
-   string::size_type i;
    string line;
    cmatch what;
    string ident;
 
-   line = skipEmptyLines( ist );
-
-   if( line.empty() )
+   if( ! readReport( ist, line ) )
       return true;
-
 
    do {
       if( ! regex_match( line.c_str(), what, ::metarType ) ){
-         boost::trim_right( line );
-
-         if( ! boost::starts_with( line, "NIL" ) )
-            cout << "ERROR [" << line << "]" << endl;
+         //This should never happend.
+         continue;
       }else {
          if( what[2].length() != 0 )
             ident = what[2];
 
          line = what[3];
-         boost::trim_right( line );
+         boost::trim( line );
 
          if( line.empty() )
             continue;
 
-         i = line.find("=");
-
-         if( i != string::npos ) {
-            line.erase( i+1 );
-            buf << line << "\n";
-            line=buf.str();
-            boost::trim( line );
-            metar_[ident].push_back( line );
-            buf.str("");
-         } else {
-            buf << line << "\n";
-         }
+         metar_[ident].push_back( line );
       }
-   } while( getline( ist, line, '\n') );
+   } while( readReport( ist, line ) );
 
-   //Check if we have one left over without an = at the end.
-   line = buf.str();
-   if( ! line.empty() ) {
-      line += "=";
-      boost::trim( line );
-      metar_[ident].push_back( line );
-   }
-
+   removeEmptyKeys( metar_ );
 }
 
 bool
@@ -513,7 +510,7 @@ operator<<(std::ostream& output,
       for(itl=itm->second.begin();
             itl!=itm->second.end();
             itl++){
-         output << *itl;
+         output << "["<< *itl <<"]"<< endl;
       }
 
       output << endl;
@@ -528,7 +525,7 @@ operator<<(std::ostream& output,
       for(itl=itm->second.begin();
             itl!=itm->second.end();
             itl++){
-         output << *itl;
+         output << *itl << endl;
       }
       output << endl;
    }
@@ -542,7 +539,7 @@ operator<<(std::ostream& output,
       for(itl=itm->second.begin();
             itl!=itm->second.end();
             itl++){
-         output << *itl;
+         output << *itl << endl;
       }
 
       output << endl;

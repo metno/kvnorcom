@@ -56,7 +56,18 @@ class WMORaport{
  protected:
   typedef bool (WMORaport::*doRaport)( std::istream &ist, const std::string &header );
 
-  std::string skipEmptyLines( std::istream &ist );
+  std::string skipEmptyLines( std::istream &ist )const;
+  void removeEmptyKeys( MsgMap &msgMap );
+  /**
+   * Read from the inputstream until an "=" sign is read.
+   * It cleans the input for '\r' chars.
+   *
+   * @param ist The inputstream to read from.
+   * @param[out] report The report.
+   * @return true if report is filled with something and false otherwise.
+   */
+  bool readReport( std::istream &ist, std::string &report)const;
+
   bool decode(std::istream &ist);
   bool dispatch( std::istream &ist );
   bool getMessage( std::istream &ist, std::ostream &msg );
