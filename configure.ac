@@ -1,5 +1,5 @@
 AC_PREREQ([2.59])
-AC_INIT([norcom2kv], [2.4.4-RC3], [kvoss@met.no])
+AC_INIT([norcom2kv], [2.4.4-RC4], [kvoss@met.no])
 AM_INIT_AUTOMAKE([foreign])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -14,7 +14,7 @@ AC_CONFIG_HEADERS(config.h)
 
 KV_FIND_OMNIORB4
 PKG_CHECK_MODULES(putools, puTools)
-LIBKVCPP2
+LIBKVCPP
 
 GTEST_CHECK
 GMOCK_CHECK
@@ -26,6 +26,8 @@ AX_BOOST_REGEX
 if test -z $BOOST_REGEX_LIB; then AC_MSG_ERROR([Unable to find boost regex library]); fi 
 AX_BOOST_FILESYSTEM
 if test -z $BOOST_FILESYSTEM_LIB; then AC_MSG_ERROR([Unable to find boost filesystem library]); fi
+AX_BOOST_SYSTEM
+if test -z $BOOST_SYSTEM_LIB; then AC_MSG_ERROR([Unable to find boost system library]); fi
 AX_BOOST_PROGRAM_OPTIONS
 if test -z $BOOST_PROGRAM_OPTIONS_LIB; then AC_MSG_ERROR([Unable to find boost program_options library]); fi
  

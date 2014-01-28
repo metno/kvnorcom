@@ -1,3 +1,10 @@
+norcom2kv (2.4.4~RC4-1) lucid; urgency=low 
+
+  * New configuration parameter, ignore_files_before, that ignore files
+    that has an mtime that is before the time when the program started up.  
+  
+ -- Kvalobs <kvalobs@met.no>  Tue, 28 Jan 2014 09:00:00 +0100
+
 norcom2kv (2.4.4~RC3-1) lucid; urgency=low 
 
   * Code cleanup. 
