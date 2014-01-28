@@ -1,4 +1,5 @@
 AM_CPPFLAGS = -D_REENTRANT \
+              $(putools_CFLAGS) \
               $(kvcpp_CFLAGS) \
               $(BOOST_CPPFLAGS) \
               $(omniORB4_CFLAGS)  
@@ -22,7 +23,7 @@ norcom2kv_LDFLAGS = -pthread
 norcom2kv_LDADD = $(kvcpp_LIBS) \
                   $(putools_LIBS) $(omniORB4_LIBS)\
                   $(BOOST_REGEX_LIB) $(BOOST_THREAD_LIB) \
-                  $(BOOST_FILESYSTEM_LIB) \
+                  $(BOOST_FILESYSTEM_LIB) $(BOOST_SYSTEM_LIB) \
                   -lm -ldl 
 
 testWMORaport_SOURCES = \
