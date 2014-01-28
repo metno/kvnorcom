@@ -230,16 +230,16 @@ App::App(int argn,
             debug_=false;
       }
 
-      valelem=myConf->getValue("ignore_files_before");
+      valelem=myConf->getValue("ignore_files_before_startup");
 
       if(valelem.size()>0){
     	  string tmp;
     	  tmp=valelem[0].valAsString();
 
     	  if(!tmp.empty() && (tmp[0]=='t' || tmp[0]=='T')) {
-    		  ignoreFilesBefore = pt::second_clock::universal_time();
+    		  ignoreFilesBeforeStartup = pt::second_clock::universal_time();
     	  } else {
-    		  ignoreFilesBefore = pt::ptime( pt::neg_infin );
+    		  ignoreFilesBeforeStartup = pt::ptime( pt::neg_infin );
     	  }
       }
    }

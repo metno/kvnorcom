@@ -52,7 +52,7 @@ using namespace miutil;
 
 
 CollectWmoReports::CollectWmoReports(App &app_)
-:app(app_), ignoreFilesBefore( app.ignoreFilesBefore )
+:app(app_), ignoreFilesBefore( app.ignoreFilesBeforeStartup )
 {
 
 }

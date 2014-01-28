@@ -60,7 +60,7 @@ private:
   void initLogger(const std::string &ll, const std::string &tl);
 
  public:
-  boost::posix_time::ptime ignoreFilesBefore;
+  boost::posix_time::ptime ignoreFilesBeforeStartup;
 
   App(int argn, char **argv, const char *options[0][2]=0);
   virtual ~App();
