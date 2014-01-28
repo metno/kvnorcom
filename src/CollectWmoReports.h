@@ -35,6 +35,7 @@
 #include <string>
 #include <map>
 #include <list>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include "App.h"
 #include "FInfo.h"
 #include "File.h"
@@ -54,6 +55,7 @@ class CollectWmoReports
     
     App                             &app;
     FInfoList                       fileInfoList;
+    boost::posix_time::ptime ignoreFilesBefore;
     
     bool checkForNewObservations();
     void collectObservations();

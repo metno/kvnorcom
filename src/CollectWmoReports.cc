@@ -52,7 +52,7 @@ using namespace miutil;
 
 
 CollectWmoReports::CollectWmoReports(App &app_)
-:app(app_)
+:app(app_), ignoreFilesBefore( app.ignoreFilesBefore )
 {
 
 }
@@ -109,6 +109,7 @@ CollectWmoReports::getFileList(FileList &fileList,
    string            filepath;
    struct stat       sbuf;
    File              f;
+   boost::posix_time::ptime ftime;
 
    fileList.clear();
 
@@ -143,6 +144,11 @@ CollectWmoReports::getFileList(FileList &fileList,
                   filepath << ">!");
          continue;
       }
+
+      ftime = boost::posix_time::from_time_t( sbuf.st_mtime );
+
+      if( ftime < ignoreFilesBefore )
+    	  continue;
 
       f=File(filepath, sbuf);
 

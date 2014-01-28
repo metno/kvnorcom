@@ -33,6 +33,7 @@
 
 #include <string>
 #include <map>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include <kvskel/datasource.hh>
 #include <kvalobs/kvapp.h>
 #include "WMORaport.h"
@@ -59,6 +60,8 @@ private:
   void initLogger(const std::string &ll, const std::string &tl);
 
  public:
+  boost::posix_time::ptime ignoreFilesBefore;
+
   App(int argn, char **argv, const char *options[0][2]=0);
   virtual ~App();
 

@@ -41,6 +41,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <milog/milog.h>
+#include <miutil/timeconvert.h>
 #include "App.h"
 #include <fstream>
 #include <miconfparser/miconfparser.h>
@@ -51,12 +52,14 @@ using namespace std;
 using namespace CKvalObs::CDataSource;
 using namespace milog;
 using namespace boost;
+
 using miutil::conf::ConfSection;
 using miutil::conf::ValElementList;
 using miutil::conf::ValElement;
 using miutil::conf::CIValElementList;
 
 namespace fs=boost::filesystem;
+namespace pt=boost::posix_time;
 
 
 namespace{
@@ -225,6 +228,19 @@ App::App(int argn,
             debug_=true;
          else
             debug_=false;
+      }
+
+      valelem=myConf->getValue("ignore_files_before");
+
+      if(valelem.size()>0){
+    	  string tmp;
+    	  tmp=valelem[0].valAsString();
+
+    	  if(!tmp.empty() && (tmp[0]=='t' || tmp[0]=='T')) {
+    		  ignoreFilesBefore = pt::second_clock::universal_time();
+    	  } else {
+    		  ignoreFilesBefore = pt::ptime( pt::neg_infin );
+    	  }
       }
    }
 
