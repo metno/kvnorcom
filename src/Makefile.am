@@ -16,9 +16,10 @@ norcom2kv_SOURCES = norcom2kv.cc \
                     File.cc File.h \
                     InitLogger.cc InitLogger.h \
                     FInfo.h \
-                    kvDataSrcList.h
+                    kvDataSrcList.h \
+                    decodeArgv0.cc decodeArgv0.h
 
-norcom2kv_CPPFLAGS = $(AM_CPPFLAGS)
+norcom2kv_CPPFLAGS = $(AM_CPPFLAGS) 
 norcom2kv_LDFLAGS = -pthread 
 norcom2kv_LDADD = $(kvcpp_LIBS) \
                   $(putools_LIBS) $(omniORB4_LIBS)\
@@ -28,13 +29,16 @@ norcom2kv_LDADD = $(kvcpp_LIBS) \
 
 testWMORaport_SOURCES = \
 	testWMORaport.cc \
+	decodeArgv0.cc decodeArgv0.h \
 	WMORaport.cc WMORaport.h 
 
-testWMORaport_CPPFLAGS = $(AM_CPPFLAGS)
+testWMORaport_CPPFLAGS = $(AM_CPPFLAGS) \
+                         -DSYSCONFDIR="\""$(sysconfdir)"\"" 
 testWMORaport_LDFLAGS = -pthread 
 testWMORaport_LDADD = $(kvcpp_LIBS) \
               $(putools_LIBS) \
               $(BOOST_REGEX_LIB) $(BOOST_THREAD_LIB) \
               $(BOOST_FILESYSTEM_LIB) \
+              $(BOOST_SYSTEM_LIB) \
               -lm -ldl 
 

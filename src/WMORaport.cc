@@ -31,32 +31,36 @@
 #include <cctype>
 #include <string>
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 #include <algorithm>
 #include <boost/regex.hpp>
 #include <boost/foreach.hpp>
 #include <boost/algorithm/string.hpp>
+#include <stdexcept>
+#include <miutil/base64.h>
+#include <miutil/trimstr.h>
 #include "WMORaport.h"
 
 using namespace std;
 using namespace boost;
 
 /**
-* Format of the WMO reports from NORCOM:
-* All message reports shall start with the
-* sequence ZCZC, and after that comes the message type. The message type
-* is on the form: TTAAii CCCC DTG [BBB]
-* The message type is coded in TT. Where the diffrent message types is as
-* follows:
-*    SI,SM,SN             -> synop
-*    SA,SP                -> metar
-*    UE,UF,UK,UL,UM,US,UZ -> temp
-*    UG,UH,Ui,UP,UQ,UY    -> pilo
-*    UA,UD                -> arep
-*    SS                   -> drau
-*    SO                   -> bath
-*    ISRZ                 -> tide
-*/
+ * Format of the WMO reports from NORCOM:
+ * All message reports shall start with the
+ * sequence ZCZC, and after that comes the message type. The message type
+ * is on the form: TTAAii CCCC DTG [BBB]
+ * The message type is coded in TT. Where the diffrent message types is as
+ * follows:
+ *    SI,SM,SN             -> synop
+ *    SA,SP                -> metar
+ *    UE,UF,UK,UL,UM,US,UZ -> temp
+ *    UG,UH,Ui,UP,UQ,UY    -> pilo
+ *    UA,UD                -> arep
+ *    SS                   -> drau
+ *    SO                   -> bath
+ *    ISRZ                 -> tide
+ */
 
 
 namespace{
@@ -76,16 +80,122 @@ regex bath("^ *SO\\w{4} +\\w+ +\\d+ *\\w*");
 regex tide("^ *ISRZ\\w{2}+ +\\w+ +\\d+ *\\w*");
 regex bufrSurface("^ *IS(I|M|N)\\w{3} +\\w+ +\\d+ *\\w*");
 
+bool
+validChar( char ch, const char *valid )
+{
+	int i;
+	for( i=0; valid[i] && valid[i]!=ch; ++i );
+	return valid[i];
+}
+
+string
+readToEof( std::istream &ist )
+{
+	const int N=256;
+	char buf[N];
+	int n;
+
+	ostringstream ost(ios_base::out | ios_base::binary);
+
+	while( ! ist.eof()  ) {
+		if( ist.read(buf, N).fail() && ! ist.eof() ) {
+			cerr << "ERROR 1: readToEof\n";
+			break;
+		}
+
+		n=ist.gcount();
+
+		if( n > 0 && ost.write( buf, n ).fail() ){
+			cerr << "ERROR 2: readToEof\n";
+			break;
+		}
+	}
+
+	return ost.str();
+}
+
+
+void
+skip( std::istream &ist, const char *what )
+{
+	char ch;
+
+	while( !ist.eof() ) {
+		if( ist.get( ch ).fail() )
+			return;
+
+		if( ! validChar( ch, what ) ) {
+			ist.putback( ch );
+			return;
+		}
+	}
+}
+
+
+
+bool
+findZCZC( std::istream &ist, std::string &theZCZCline )
+{
+	const char *ZCZC="ZCZC";
+	const char *validch=" 1234567890\r\n";
+	int izc=0;
+	char ch,prevch;
+	bool found=false;
+	bool isValidCh;
+	theZCZCline.erase();
+
+	//Search for the start of message (ZCZC nnn).
+	//nnnn is optional.
+	while( ! found && ! ist.eof() ) {
+		if( ist.get( ch ).fail() && ! ist.eof())
+			return false;
+
+		if( ch == ZCZC[izc] ) {
+			theZCZCline.push_back( ch );
+			++izc;
+		} else {
+			izc=0;
+			if( ZCZC[izc] != '\0')
+				theZCZCline.erase();
+		}
+
+
+		if( ZCZC[izc] == '\0' ) //We have found ZCZC
+			found = true;
+	}
+
+	if( ! found ) return false;
+
+	do {
+		prevch=ch;
+		if( ist.get( ch ).fail() && ! ist.eof())
+			return false;
+
+		isValidCh = validChar( ch, validch);
+
+		if( isValidCh )
+			theZCZCline.push_back( ch );
+
+	}while( isValidCh );
+
+	ist.putback( ch );
+	miutil::trimstr( theZCZCline );
+	return prevch == '\n';
+}
+
+
+
+
 }
 
 WMORaport::WMORaport(bool warnAsError_):
-        warnAsError(warnAsError_)
+		  warnAsError(warnAsError_)
 {
 }
 
 WMORaport::WMORaport(const WMORaport &r):
-        synop_(r.synop_),temp_(r.temp_), metar_(r.metar_), pilo_(r.pilo_),
-        arep_(r.arep_), drau_(r.drau_),bath_(r.bath_), tide_(r.tide_)
+        												synop_(r.synop_),temp_(r.temp_), metar_(r.metar_), pilo_(r.pilo_),
+        												arep_(r.arep_), drau_(r.drau_),bath_(r.bath_), tide_(r.tide_)
 {
 }
 
@@ -97,33 +207,41 @@ WMORaport::~WMORaport()
 WMORaport& 
 WMORaport::operator=(const WMORaport &rhs)
 {
-   if(this!=&rhs){
-      synop_=rhs.synop_;
-      temp_=rhs.temp_;
-      metar_=rhs.metar_;
-      pilo_=rhs.pilo_;
-      arep_=rhs.arep_;
-      drau_=rhs.drau_;
-      bath_=rhs.bath_;
-      tide_=rhs.tide_;
-   }
-   return *this;
+	if(this!=&rhs){
+		synop_=rhs.synop_;
+		temp_=rhs.temp_;
+		metar_=rhs.metar_;
+		pilo_=rhs.pilo_;
+		arep_=rhs.arep_;
+		drau_=rhs.drau_;
+		bath_=rhs.bath_;
+		tide_=rhs.tide_;
+	}
+	return *this;
 }
 
 std::string
 WMORaport::
 skipEmptyLines( std::istream &ist )const
 {
-   string line;
+	ostringstream line;
+	char ch;
 
-   while( getline( ist, line, '\n' ) ) {
-      if( ! boost::trim_left_copy( line ).empty() ) {
-         line += "\n";
-         break;
-      }
-   }
+	skip( ist, " \t\r\n" );
 
-   return line;
+	while(  ! ist.eof() ) {
+		if( ist.get( ch ).fail() && ! ist.eof())
+			break;;
+
+		if( isalnum(ch) || ch==' ') {
+			line << ch;
+		} else {
+			skip( ist, " \t\r\n" );
+			break;
+		}
+	}
+
+	return line.str();
 }
 
 
@@ -131,249 +249,267 @@ bool
 WMORaport::
 readReport( std::istream &ist, std::string &report)const
 {
-   ostringstream buf;
-   string::size_type i;
-   string line;
+	ostringstream buf;
+	string::size_type i;
+	string line;
 
-   report.erase();
-   line = skipEmptyLines( ist );
+	report.erase();
+	line = skipEmptyLines( ist );
 
-   if( line.empty() )
-      return false;
+	if( line.empty() )
+		return false;
 
-   do {
-      boost::trim_right( line );
-      i = line.find("=");
+	do {
+		boost::trim_right( line );
+		i = line.find("=");
 
-      if( i != string::npos ) {
-         line.erase( i+1 ); //Clean eventually rubbish from the end.
-         buf << line << "\n";
-         report = buf.str();
-         return true;
-      } else {
-         buf << line << "\n";
-      }
-   }while( getline( ist, line, '\n') );
+		if( i != string::npos ) {
+			line.erase( i+1 ); //Clean eventually rubbish from the end.
+			buf << line << "\n";
+			report = buf.str();
+			return true;
+		} else {
+			buf << line << "\n";
+		}
+	}while( getline( ist, line, '\n') );
 
-   line = buf.str();
+	line = buf.str();
 
-   if( ! boost::trim_copy( line ).empty() ) {
-      report = line + "\n";
-      return true;
-   }
+	if( ! boost::trim_copy( line ).empty() ) {
+		report = line + "\n";
+		return true;
+	}
 
-   return false;
+	return false;
 }
 
 void
 WMORaport::
 removeEmptyKeys( MsgMap &msgMap )
 {
-   MsgMap::iterator itTmp;
-   MsgMap::iterator it=msgMap.begin();
+	MsgMap::iterator itTmp;
+	MsgMap::iterator it=msgMap.begin();
 
-   while( it != msgMap.end() ) {
-      if( boost::trim_copy(it->first) == "" ) {
-         itTmp = it;
-         ++it;
-         msgMap.erase( itTmp );
-      }else {
-         ++it;
-      }
-   }
+	while( it != msgMap.end() ) {
+		if( boost::trim_copy(it->first.what) == "" ) {
+			itTmp = it;
+			++it;
+			msgMap.erase( itTmp );
+		}else {
+			++it;
+		}
+	}
 }
 
 
 bool
 WMORaport::
-doSYNOP( std::istream &ist, const std::string &header )
+doSYNOP( std::istream &ist, const std::string &header, const std::string &theZCZCline )
 {
-   bool skip = false;
-   string line;
-   cmatch what;
-   string ident;
+	bool skip = false;
+	string line;
+	cmatch what;
+	string ident;
 
-   if( ! readReport( ist, line ) )
-      return true;
+	if( ! readReport( ist, line ) )
+		return true;
 
-   do {
-      boost::trim_right( line );
-      if( ! regex_match( line.c_str(), what, ::synopType ) ){
-         //This should never happend
-         continue;
-      } else {
-         if( what[2].length() > 0 ) {
-            ident = what[2];
-            if( what[3] == "OO" ) skip = true; //SYNOP mobile
-            else skip = false;
-         }
+	do {
+		boost::trim_right( line );
+		if( ! regex_match( line.c_str(), what, ::synopType ) ){
+			//This should never happend
+			continue;
+		} else {
+			if( what[2].length() > 0 ) {
+				ident = what[2];
+				if( what[3] == "OO" ) skip = true; //SYNOP mobile
+				else skip = false;
+			}
 
-         line = what[6];
+			line = what[6];
 
-         if( line.empty() )
-            continue;
+			if( line.empty() )
+				continue;
 
-         if( ! skip && ! ident.empty()  ) {
-            boost::trim( line );
-            if( ! regex_match( line.c_str(), what, ::synopIsNil ) ){
-               synop_[ident].push_back( line );
-            }
-         }
-      }
-   }while( readReport( ist, line ) );
+			if( ! skip && ! ident.empty()  ) {
+				boost::trim( line );
+				if( ! regex_match( line.c_str(), what, ::synopIsNil ) ){
+					synop_[MsgInfo(ident, true)].push_back( line );
+				}
+			}
+		}
+	}while( readReport( ist, line ) );
 
-   removeEmptyKeys( synop_ );
+	removeEmptyKeys( synop_ );
 
-   return true;
+	return true;
 }
 
 bool
 WMORaport::
-doMETAR( std::istream &ist, const std::string &header )
+doMETAR( std::istream &ist, const std::string &header, const std::string &theZCZCline )
 {
-   string line;
-   cmatch what;
-   string ident;
+	string line;
+	cmatch what;
+	string ident;
 
-   if( ! readReport( ist, line ) )
-      return true;
+	if( ! readReport( ist, line ) )
+		return true;
 
-   do {
-      if( ! regex_match( line.c_str(), what, ::metarType ) ){
-         //This should never happend.
-         continue;
-      }else {
-         if( what[2].length() != 0 )
-            ident = what[2];
+	do {
+		if( ! regex_match( line.c_str(), what, ::metarType ) ){
+			//This should never happend.
+			continue;
+		}else {
+			if( what[2].length() != 0 )
+				ident = what[2];
 
-         line = what[3];
-         boost::trim( line );
+			line = what[3];
+			boost::trim( line );
 
-         if( line.empty() )
-            continue;
+			if( line.empty() )
+				continue;
 
-         metar_[ident].push_back( line );
-      }
-   } while( readReport( ist, line ) );
+			metar_[MsgInfo(ident, true)].push_back( line );
+		}
+	} while( readReport( ist, line ) );
 
-   removeEmptyKeys( metar_ );
+	removeEmptyKeys( metar_ );
 }
 
 bool
 WMORaport::
-doTEMP( std::istream &ist, const std::string &header )
+doTEMP( std::istream &ist, const std::string &header, const std::string &theZCZCline )
 {
-   errorStr << "TEMP: not implemented: " << header << endl;
-   return true;
+	errorStr << "TEMP: not implemented: " << header << endl;
+	return true;
 }
 
 bool
 WMORaport::
-doPILO( std::istream &ist, const std::string &header )
+doPILO( std::istream &ist, const std::string &header, const std::string &theZCZCline )
 {
-   errorStr << "PILO: not implemented: " << header << endl;
+	errorStr << "PILO: not implemented: " << header << endl;
 }
 
 bool
 WMORaport::
-doAREP( std::istream &ist, const std::string &header )
+doAREP( std::istream &ist, const std::string &header, const std::string &theZCZCline )
 {
-   errorStr << "AREP: not implemented: " << header << endl;
-   return true;
+	errorStr << "AREP: not implemented: " << header << endl;
+	return true;
 }
 
 bool
 WMORaport::
-doDRAU( std::istream &ist, const std::string &header )
+doDRAU( std::istream &ist, const std::string &header, const std::string &theZCZCline )
 {
-   errorStr << "DRAU: not implemented: " << header << endl;
-   return true;
+	errorStr << "DRAU: not implemented: " << header << endl;
+	return true;
 }
 
 bool
 WMORaport::
-doBATH( std::istream &ist, const std::string &header )
+doBATH( std::istream &ist, const std::string &header, const std::string &theZCZCline )
 {
-   errorStr << "BATH: not implemented: " << header << endl;
-   return true;
+	errorStr << "BATH: not implemented: " << header << endl;
+	return true;
 }
 
 bool
 WMORaport::
-doTIDE( std::istream &ist, const std::string &header )
+doTIDE( std::istream &ist, const std::string &header, const std::string &theZCZCline )
 {
-   errorStr << "TIDE: not implemented: " << header << endl;
-   return true;
+	errorStr << "TIDE: not implemented: " << header << endl;
+	return true;
 }
 
 bool
 WMORaport::
-doBUFR_SURFACE( std::istream &ist, const std::string &header )
+doBUFR_SURFACE( std::istream &ist, const std::string &header, const std::string &theZCZCline )
 {
-   errorStr << "BUFR (SURFACE): not implemented: " << header << endl;
-   return true;
+	static int count=0;
+	++count;
+	string data;
+	string bufr;
+	ostringstream ost;
+
+	data = readToEof( ist );
+
+	if( data.size() < 4 || data.substr(0, 4) != "BUFR") {
+		return false;
+	} else {
+		if( data.substr(0, 4) != "BUFR" )
+			return false;
+
+		ost << theZCZCline << "\n" <<  header << "\n" << data;
+		data = ost.str();
+		miutil::encode64( data.data(), data.size(), bufr );
+		bufrSurface_[MsgInfo("bufr_surface", "encoding=base64", false)].push_back( bufr );
+		return true;
+	}
 }
 
 
 bool
 WMORaport::
 doDispatch( doRaport func, wmoraport::WmoRaport raportType,
-            std::istream &ist,  const string &header )
+		std::istream &ist,  const string &header, const std::string &theZCZCline )
 {
-   if( ! raportsToCollect.empty() &&
-         raportsToCollect.find( raportType ) == raportsToCollect.end() )
-      return true;
+	if( ! raportsToCollect.empty() &&
+			raportsToCollect.find( raportType ) == raportsToCollect.end() )
+		return true;
 
-   return (this->*func)( ist, header );
+	return (this->*func)( ist, header, theZCZCline );
 }
 
 bool
 WMORaport::
-dispatch( std::istream &ist )
+dispatch( std::istream &ist, const std::string &theZCZCline )
 {
-   cmatch what;
-   string buf;
+	cmatch what;
+	string buf;
 
-   //Skip blank lines at the beginning.
-   buf = skipEmptyLines( ist );
+	//Skip blank lines at the beginning and get the first line. This is the GTS header.
+	buf = skipEmptyLines( ist );
 
-   if( buf.empty() )
-      return true;
+	if( buf.empty() )
+		return true;
 
-   boost::trim( buf );
+	//boost::trim( buf );
 
-   if(regex_match(buf.c_str(), what, ::synop)){
-      return doDispatch( &WMORaport::doSYNOP, wmoraport::SYNOP,
-                         ist, buf );
-   }else if(regex_match(buf.c_str(), what, ::metar)){
-      return doDispatch( &WMORaport::doMETAR, wmoraport::METAR,
-                         ist, buf );
-   }else if(regex_match(buf.c_str(), what, ::temp)){
-      return doDispatch( &WMORaport::doTEMP, wmoraport::TEMP,
-                         ist, buf );
-   }else if(regex_match(buf.c_str(), what, ::pilo)){
-      return doDispatch( &WMORaport::doPILO, wmoraport::PILO,
-                         ist, buf );
-   }else if(regex_match(buf.c_str(), what, ::arep)){
-      return doDispatch( &WMORaport::doAREP, wmoraport::AREP,
-                         ist, buf );
-   }else if(regex_match(buf.c_str(), what, ::drau)){
-      return doDispatch( &WMORaport::doDRAU, wmoraport::DRAU,
-                         ist, buf );
-   }else if(regex_match(buf.c_str(), what, ::bath)){
-      return doDispatch( &WMORaport::doBATH, wmoraport::BATH,
-                         ist, buf );
-   }else if(regex_match(buf.c_str(), what, ::tide)){
-      return doDispatch( &WMORaport::doTIDE, wmoraport::TIDE,
-                         ist, buf );
-   }else if(regex_match(buf.c_str(), what, ::tide)){
-      return doDispatch( &WMORaport::doBUFR_SURFACE, wmoraport::BUFR_SURFACE,
-                         ist, buf );
-   }else {
-      errorStr << "UNKNOWN: bulletin: " << buf << endl;
-      return true;
-      //Unknown bulentin
-   }
+	if(regex_match(buf.c_str(), what, ::synop)){
+		return doDispatch( &WMORaport::doSYNOP, wmoraport::SYNOP,
+				ist, buf, theZCZCline );
+	}else if(regex_match(buf.c_str(), what, ::metar)){
+		return doDispatch( &WMORaport::doMETAR, wmoraport::METAR,
+				ist, buf, theZCZCline );
+	}else if(regex_match(buf.c_str(), what, ::temp)){
+		return doDispatch( &WMORaport::doTEMP, wmoraport::TEMP,
+				ist, buf, theZCZCline );
+	}else if(regex_match(buf.c_str(), what, ::pilo)){
+		return doDispatch( &WMORaport::doPILO, wmoraport::PILO,
+				ist, buf, theZCZCline );
+	}else if(regex_match(buf.c_str(), what, ::arep)){
+		return doDispatch( &WMORaport::doAREP, wmoraport::AREP,
+				ist, buf, theZCZCline );
+	}else if(regex_match(buf.c_str(), what, ::drau)){
+		return doDispatch( &WMORaport::doDRAU, wmoraport::DRAU,
+				ist, buf, theZCZCline );
+	}else if(regex_match(buf.c_str(), what, ::bath)){
+		return doDispatch( &WMORaport::doBATH, wmoraport::BATH,
+				ist, buf, theZCZCline );
+	}else if(regex_match(buf.c_str(), what, ::tide)){
+		return doDispatch( &WMORaport::doTIDE, wmoraport::TIDE,
+				ist, buf, theZCZCline );
+	}else if(regex_match(buf.c_str(), what, ::bufrSurface)){
+		return doDispatch( &WMORaport::doBUFR_SURFACE, wmoraport::BUFR_SURFACE,
+				ist, buf, theZCZCline );
+	}else {
+		//errorStr << "UNKNOWN: bulletin: " << buf << endl;
+		return true;
+		//Unknown bulentin
+	}
 }
 
 
@@ -394,242 +530,298 @@ dispatch( std::istream &ist )
  */
 bool
 WMORaport::
-getMessage( std::istream &ist, std::ostream &msg )
+getMessage( std::istream &ist, std::ostream &msg, std::string &theZCZCline )
 {
-   cmatch what;
-   string line;
-   string buf;
-   ostringstream empty;
-   bool zczcFound=false;
-   int nEmpty;
+	const char *NNNN="NNNN";
+	int iNNN=0;
+	char ch, prevCh;
+	int rnCount=0;
+	int count=0;
+	bool complite = false;
+	bool error=false;
+	string buf;
+	ostringstream ost( ios_base::out | ios_base::binary );
 
-   //Search for the start of message (ZCZC nnn).
-   //nnnn is optional.
-   while( ! zczcFound &&  getline( ist, line, '\n' ) ) {
-      ++lineno;
-      if(! regex_match( line.c_str(), what, ::zczc)) {
-         notMatchedInGetMessage << line << "\n";
-         continue;
-      }
-      zczcFound = true;
-   }
+	//Search for the start of message (ZCZC nnn).
+	//nnnn is optional.
+	if( ! findZCZC( ist, theZCZCline ) )
+		return false;
 
-   if( ! zczcFound ) //Possibly the end of stream
-      return false;
+	//Search for the end mark (NNNN).
+	while( !ist.eof() ) {
+		if( ist.get( ch ).fail() )
+			return false;
 
-   nEmpty = 0;
+		ost << ch;
 
-   //Search for the end mark (NNNN).
-   while( getline( ist, line ) ) {
-      ++lineno;
-      buf = boost::trim_copy( line );
+		if( NNNN[iNNN] == ch || ch == '\n' || ch == '\r' ) {
+			++count;
+			if( NNNN[iNNN] == ch ) {
+				++iNNN;
+			} else {
+				++rnCount;
+				iNNN = 0;
+			}
+		} else {
+			count=0;
+			iNNN=0;
+			rnCount=0;
+		}
 
-      if( buf.empty() ) {
-         empty << line << '\n';
-         ++nEmpty;
-         continue;
-      }
+		if( ! NNNN[iNNN] && rnCount > 2 ) {
+			rnCount=0;
+			while( true ) {
+				prevCh = ch;
 
-      //We are a bit tolerant here in
-      if( buf == "NNNN" && nEmpty > 4 && nEmpty <= 8 )
-         return true;
+				if( ist.get( ch ).fail()  ) {
+					return false;
+				}
 
-      if( nEmpty > 0 ) {
-         msg << empty.str();
-         empty.str("");
-         nEmpty = 0;
-      }
+				if( validChar( ch, "\r\n") ) {
+					++rnCount;
+					++count;
+					ost << ch;
+				} else if( prevCh == '\n' && rnCount > 0 ) {
+					ist.putback( ch );
+					buf=ost.str();
 
-      msg << line << "\n";
-   }
+					///Remove the last count chars from the buf, this is \n\n\n\n\n\n\nNNNN\r\r\n.
+					buf.erase( buf.size() - count );
+					msg << buf;
+					return true;
+				} else {
+					break;
+				}
+			}
+			return false;
+			iNNN=0;
+			rnCount=0;
+			count=0;
+		}
+	}
 
-   //We have reached the end of the input stream
-   //without finding the end mark (NNNN). We
-   //pretend the end mark i found and return true
-   //anyway.
-   return true;
+	buf = ost.str();
+
+	if( buf.size() == 0 )
+		return false;
+
+	msg << buf;
+	//We have reached the end of the input stream
+	//without finding the end mark (NNNN). We
+	//pretend the end mark is found and return true
+	//anyway.
+	return true;
 }
+
 
 bool
 WMORaport::
 decode(std::istream &ist)
 {
-   stringstream msg;
-   string tmp;
-   int i=0;
+	stringstream msg( ios_base::out | ios_base::in | ios_base::binary );
+	string tmp;
+	string theZCZCline;
+	int i=0;
 
-   notMatchedInGetMessage.str("");
+	notMatchedInGetMessage.str("");
 
-   while( getMessage( ist, msg ) ){
-      tmp = msg.str();
-      if( ! dispatch( msg ) ) {
-         errorStr << "ERROR: can't split bulletin segment[" << endl
-               << tmp << "]" << endl;
-      }
-      msg.clear();
-      msg.str("");
-      ++i;
-   }
+	while( ! ist.eof() ){
+		if( getMessage( ist, msg, theZCZCline ) ) {
+			tmp = msg.str();
+			if( ! dispatch( msg, theZCZCline ) ) {
+				errorStr << "ERROR: can't split bulletin segment[" << endl
+						<< tmp << "]" << endl;
+			}
+		}
+		msg.clear();
+		msg.str("");
+		++i;
+	}
 
-   string error=boost::trim_copy( notMatchedInGetMessage.str() );
+	string error=boost::trim_copy( notMatchedInGetMessage.str() );
 
-   if( ! error.empty() ) {
-      errorStr << " ----- BEGIN NOT MATCHED ---- " << endl;
-      errorStr << notMatchedInGetMessage.str() << endl;
-      errorStr << " ----- END NOT MATCHED ---- " << endl;
-   }
-   return true;
+	if( ! error.empty() ) {
+		errorStr << " ----- BEGIN NOT MATCHED ---- " << endl;
+		errorStr << notMatchedInGetMessage.str() << endl;
+		errorStr << " ----- END NOT MATCHED ---- " << endl;
+	}
+	return true;
 }
 
 bool
 WMORaport::split(const std::string &raport,
-                 const wmoraport::WmoRaports &collectRaports )
+		const wmoraport::WmoRaports &collectRaports )
 {
-   std::istringstream inputStream;
-   string msg(raport);
+	std::istringstream inputStream( ios_base::in | ios_base::binary);
+	string msg(raport);
 
-   errorStr.str("");
-//   cleanCR(msg);
-   inputStream.str(msg);
-   raportsToCollect = collectRaports;
-   return decode(inputStream);
+	errorStr.str("");
+	//   cleanCR(msg);
+	inputStream.str(msg);
+	raportsToCollect = collectRaports;
+	return decode(inputStream);
 }
 
 
 std::ostream& 
 operator<<(std::ostream& output,
-           const WMORaport& r)
+		const WMORaport& r)
 {
-   WMORaport::CIMsgMap  itm;
-   WMORaport::CIMsgList itl;
+	WMORaport::CIMsgMap  itm;
+	WMORaport::CIMsgList itl;
 
-   output << " ---- SYNOP BEGIN ----" << endl;
-   for( itm=r.synop_.begin();
-        itm!=r.synop_.end(); itm++){
-      output << "<<" << itm->first <<">>" << endl;
-      for(itl=itm->second.begin();
-            itl!=itm->second.end();
-            itl++){
-         output << "["<< *itl <<"]"<< endl;
-      }
+	if( r.synop_.begin() != r.synop_.end() ) {
+		output << " ---- SYNOP BEGIN ----" << endl;
+		for( itm=r.synop_.begin();
+				itm!=r.synop_.end(); itm++){
+			output << "<<" << itm->first.what <<">>" << endl;
+			for(itl=itm->second.begin();
+					itl!=itm->second.end();
+					itl++){
+				output << "["<< *itl <<"]"<< endl;
+			}
 
-      output << endl;
-   }
-   output << " ---- SYNOP END ----" << endl;
+			output << endl;
+		}
+		output << " ---- SYNOP END ----" << endl;
+	}
 
-   output << " ---- TEMP BEGIN ----" << endl;
-   for(itm=r.temp_.begin();
-         itm!=r.temp_.end();
-         itm++){
-      output << itm->first << endl;
-      for(itl=itm->second.begin();
-            itl!=itm->second.end();
-            itl++){
-         output << *itl << endl;
-      }
-      output << endl;
-   }
-   output << " ---- TEMP END ----" << endl;
+	if( r.temp_.begin() != r.temp_.end() ) {
+		output << " ---- TEMP BEGIN ----" << endl;
+		for(itm=r.temp_.begin();
+				itm!=r.temp_.end();
+				itm++){
+			output << itm->first.what << endl;
+			for(itl=itm->second.begin();
+					itl!=itm->second.end();
+					itl++){
+				output << *itl << endl;
+			}
+			output << endl;
+		}
+		output << " ---- TEMP END ----" << endl;
+	}
 
-   output << " ---- METAR BEGIN ----" << endl;
-   for(itm=r.metar_.begin();
-         itm!=r.metar_.end();
-         itm++){
-      output << "<<" << itm->first <<">>"<< endl;
-      for(itl=itm->second.begin();
-            itl!=itm->second.end();
-            itl++){
-         output << *itl << endl;
-      }
+	if( r.metar_.begin() != r.metar_.end() ) {
+		output << " ---- METAR BEGIN ----" << endl;
+		for(itm=r.metar_.begin();
+				itm!=r.metar_.end();
+				itm++){
+			output << "<<" << itm->first.what <<">>"<< endl;
+			for(itl=itm->second.begin();
+					itl!=itm->second.end();
+					itl++){
+				output << *itl << endl;
+			}
 
-      output << endl;
-   }
-   output << " ---- METAR END ----" << endl;
+			output << endl;
+		}
+		output << " ---- METAR END ----" << endl;
+	}
 
-   for(itm=r.pilo_.begin();
-         itm!=r.pilo_.end();
-         itm++){
-      output << itm->first << endl;
-      for(itl=itm->second.begin();
-            itl!=itm->second.end();
-            itl++){
-         output << *itl;
-      }
+	if( r.pilo_.begin() != r.pilo_.end()) {
+		for(itm=r.pilo_.begin();
+				itm!=r.pilo_.end();
+				itm++){
+			output << itm->first.what << endl;
+			for(itl=itm->second.begin();
+					itl!=itm->second.end();
+					itl++){
+				output << *itl;
+			}
 
-      output << endl;
-   }
+			output << endl;
+		}
+	}
 
-   for(itm=r.arep_.begin();
-         itm!=r.arep_.end();
-         itm++){
-      output << itm->first << endl;
-      for(itl=itm->second.begin();
-            itl!=itm->second.end();
-            itl++){
-         output << *itl;
-      }
+	for(itm=r.arep_.begin();
+			itm!=r.arep_.end();
+			itm++){
+		output << itm->first.what << endl;
+		for(itl=itm->second.begin();
+				itl!=itm->second.end();
+				itl++){
+			output << *itl;
+		}
 
-      output << endl;
-   }
+		output << endl;
+	}
 
-   for(itm=r.drau_.begin();
-         itm!=r.drau_.end();
-         itm++){
-      output << itm->first << endl;
-      for(itl=itm->second.begin();
-            itl!=itm->second.end();
-            itl++){
-         output << *itl;
-      }
+	for(itm=r.drau_.begin();
+			itm!=r.drau_.end();
+			itm++){
+		output << itm->first.what << endl;
+		for(itl=itm->second.begin();
+				itl!=itm->second.end();
+				itl++){
+			output << *itl;
+		}
 
-      output << endl;
-   }
+		output << endl;
+	}
 
-   for(itm=r.bath_.begin();
-         itm!=r.bath_.end();
-         itm++){
-      output << itm->first << endl;
-      for(itl=itm->second.begin();
-            itl!=itm->second.end();
-            itl++){
-         output << *itl;
-      }
+	for(itm=r.bath_.begin();
+			itm!=r.bath_.end();
+			itm++){
+		output << itm->first.what << endl;
+		for(itl=itm->second.begin();
+				itl!=itm->second.end();
+				itl++){
+			output << *itl;
+		}
 
-      output << endl;
-   }
+		output << endl;
+	}
 
-   for(itm=r.tide_.begin();
-         itm!=r.tide_.end();
-         itm++){
-      output << itm->first << endl;
-      for(itl=itm->second.begin();
-            itl!=itm->second.end();
-            itl++){
-         output << *itl;
-      }
-      output << endl;
-   }
+	for(itm=r.tide_.begin();
+			itm!=r.tide_.end();
+			itm++){
+		output << itm->first.what << endl;
+		for(itl=itm->second.begin();
+				itl!=itm->second.end();
+				itl++){
+			output << *itl;
+		}
+		output << endl;
+	}
 
-   output << endl;
 
-   if(r.errorMap_.begin() != r.errorMap_.end())
-   {
-      output << "-------ERROR MAP (BEGIN) ---------" << endl;
+	if( r.bufrSurface_.begin() != r.bufrSurface_.end()) {
+		output << " ---- BUFR BEGIN ----" << endl;
+		for(itm=r.bufrSurface_.begin();
+				itm!=r.bufrSurface_.end();
+				itm++){
+			output << itm->first.what << " (" << itm->first.what << ")"<< endl;
+			for(itl=itm->second.begin();
+					itl!=itm->second.end();
+					itl++){
+				output << itm->first.what  << " (" << itm->first.what << ")" << endl << *itl << endl;
+			}
+			output << endl;
+		}
+		output << " ---- BUFR END ----" << endl;
+	}
 
-      for(itm=r.errorMap_.begin();
-            itm!=r.errorMap_.end();
-            itm++){
-         output << itm->first << endl;
-         for(itl=itm->second.begin();
-               itl!=itm->second.end();
-               itl++){
-            output << *itl;
-         }
-         output << "-------ERROR MAP (END) ---------" << endl;
-      }
-   }
+	output << endl;
 
-   return output;
+	if(r.errorMap_.begin() != r.errorMap_.end())
+	{
+		output << "-------ERROR MAP (BEGIN) ---------" << endl;
+
+		for(itm=r.errorMap_.begin();
+				itm!=r.errorMap_.end();
+				itm++){
+			output << itm->first.what << endl;
+			for(itl=itm->second.begin();
+					itl!=itm->second.end();
+					itl++){
+				output << *itl;
+			}
+			output << "-------ERROR MAP (END) ---------" << endl;
+		}
+	}
+
+	return output;
 }
 
 
@@ -637,40 +829,41 @@ WMORaport::MsgMapsList
 WMORaport::
 getRaports( const wmoraport::WmoRaports &raports )const
 {
-   MsgMapsList ret;
+	MsgMapsList ret;
 
-   BOOST_FOREACH( wmoraport::WmoRaport raport, raports ){
-      switch( raport ) {
-         case wmoraport::AREP: ret[wmoraport::AREP] = &arep_; break;
-         case wmoraport::BATH: ret[wmoraport::BATH] = &bath_; break;
-         case wmoraport::DRAU: ret[wmoraport::DRAU ] = &drau_; break;
-         case wmoraport::METAR: ret[wmoraport::METAR] = &metar_; break;
-         case wmoraport::PILO: ret[wmoraport::PILO] = &pilo_; break;
-         case wmoraport::SYNOP: ret[wmoraport::SYNOP] = &synop_; break;
-         case wmoraport::TEMP: ret[wmoraport::TEMP] = &temp_; break;
-         case wmoraport::TIDE: ret[wmoraport::TIDE] = &tide_ ; break;
-         case wmoraport::BUFR_SURFACE: ret[wmoraport::BUFR_SURFACE] = &bufrSurface_; break;
-         default:
-            continue;
-      }
-   }
-   return ret;
+	BOOST_FOREACH( wmoraport::WmoRaport raport, raports ){
+		switch( raport ) {
+		case wmoraport::AREP: ret[wmoraport::AREP] = &arep_; break;
+		case wmoraport::BATH: ret[wmoraport::BATH] = &bath_; break;
+		case wmoraport::DRAU: ret[wmoraport::DRAU ] = &drau_; break;
+		case wmoraport::METAR: ret[wmoraport::METAR] = &metar_; break;
+		case wmoraport::PILO: ret[wmoraport::PILO] = &pilo_; break;
+		case wmoraport::SYNOP: ret[wmoraport::SYNOP] = &synop_; break;
+		case wmoraport::TEMP: ret[wmoraport::TEMP] = &temp_; break;
+		case wmoraport::TIDE: ret[wmoraport::TIDE] = &tide_ ; break;
+		case wmoraport::BUFR_SURFACE: ret[wmoraport::BUFR_SURFACE] = &bufrSurface_; break;
+		default:
+			continue;
+		}
+	}
+	return ret;
 }
 
 std::ostream&
 operator<<(std::ostream& out, wmoraport::WmoRaport raportType )
 {
-   switch( raportType ) {
-      case wmoraport::AREP: out << "AREP"; break;
-      case wmoraport::BATH: out << "BATH"; break;
-      case wmoraport::DRAU: out << "DRAU"; break;
-      case wmoraport::METAR: out << "METAR"; break;
-      case wmoraport::PILO: out << "PILO"; break;
-      case wmoraport::SYNOP: out << "SYNOP"; break;
-      case wmoraport::TEMP: out << "TEMP"; break;
-      case wmoraport::TIDE: out << "TIDE"; break;
-      default:
-         out << "UNKNOWN";
-   }
-   return out;
+	switch( raportType ) {
+	case wmoraport::AREP: out << "AREP"; break;
+	case wmoraport::BATH: out << "BATH"; break;
+	case wmoraport::DRAU: out << "DRAU"; break;
+	case wmoraport::METAR: out << "METAR"; break;
+	case wmoraport::PILO: out << "PILO"; break;
+	case wmoraport::SYNOP: out << "SYNOP"; break;
+	case wmoraport::TEMP: out << "TEMP"; break;
+	case wmoraport::TIDE: out << "TIDE"; break;
+	case wmoraport::BUFR_SURFACE: out << "BUFR_SURFACE"; break;
+	default:
+		out << "UNKNOWN";
+	}
+	return out;
 }

@@ -42,19 +42,29 @@ typedef enum{SYNOP, METAR, TEMP, PILO,AREP, DRAU, BATH, TIDE,
 typedef std::set<WmoRaport> WmoRaports;
 }
 
+struct MsgInfo {
+	std::string what;
+	std::string decoderExtra;
+	bool addWhatInFront;
+	MsgInfo():addWhatInFront(false){}
+	MsgInfo( const std::string &what, bool whatInFront=true ):what( what ), addWhatInFront( whatInFront ){}
+	MsgInfo( const std::string &what_, const std::string &decoderExtra_, bool whatInFront=false )
+		:what( what_ ), decoderExtra( decoderExtra_ ), addWhatInFront( whatInFront ){}
+	bool operator<(const MsgInfo &rhs )const { return what < rhs.what; }
+};
 
 class WMORaport{
  public:
   typedef std::list<std::string>                          MsgList;
   typedef std::list<std::string>::iterator               IMsgList;
   typedef std::list<std::string>::const_iterator        CIMsgList;
-  typedef std::map<std::string, MsgList >                   MsgMap;
-  typedef std::map<std::string, MsgList >::iterator        IMsgMap;
-  typedef std::map<std::string, MsgList >::const_iterator CIMsgMap;
+  typedef std::map<MsgInfo, MsgList >                   MsgMap;
+  typedef std::map<MsgInfo, MsgList >::iterator        IMsgMap;
+  typedef std::map<MsgInfo, MsgList >::const_iterator CIMsgMap;
   typedef std::map<wmoraport::WmoRaport,const MsgMap*>  MsgMapsList;
 
  protected:
-  typedef bool (WMORaport::*doRaport)( std::istream &ist, const std::string &header );
+  typedef bool (WMORaport::*doRaport)( std::istream &ist, const std::string &header, const std::string &theZCZCline );
 
   std::string skipEmptyLines( std::istream &ist )const;
   void removeEmptyKeys( MsgMap &msgMap );
@@ -69,19 +79,19 @@ class WMORaport{
   bool readReport( std::istream &ist, std::string &report)const;
 
   bool decode(std::istream &ist);
-  bool dispatch( std::istream &ist );
-  bool getMessage( std::istream &ist, std::ostream &msg );
+  bool dispatch( std::istream &ist, const std::string &theZCZCline );
+  bool getMessage( std::istream &ist, std::ostream &msg, std::string &theZCZCline );
   bool doDispatch( doRaport func, wmoraport::WmoRaport raportType,
-                   std::istream &ist,  const std::string &header );
-  bool doSYNOP( std::istream &ist, const std::string &header );
-  bool doMETAR( std::istream &ist, const std::string &header );
-  bool doTEMP( std::istream &ist, const std::string &header );
-  bool doPILO( std::istream &ist, const std::string &header );
-  bool doAREP( std::istream &ist, const std::string &header );
-  bool doDRAU( std::istream &ist, const std::string &header );
-  bool doBATH( std::istream &ist, const std::string &header );
-  bool doTIDE( std::istream &ist, const std::string &header );
-  bool doBUFR_SURFACE( std::istream &ist, const std::string &header );
+                   std::istream &ist,  const std::string &header, const std::string &theZCZCline );
+  bool doSYNOP( std::istream &ist, const std::string &header, const std::string &theZCZCline );
+  bool doMETAR( std::istream &ist, const std::string &header, const std::string &theZCZCline );
+  bool doTEMP( std::istream &ist, const std::string &header, const std::string &theZCZCline );
+  bool doPILO( std::istream &ist, const std::string &header, const std::string &theZCZCline );
+  bool doAREP( std::istream &ist, const std::string &header, const std::string &theZCZCline );
+  bool doDRAU( std::istream &ist, const std::string &header, const std::string &theZCZCline );
+  bool doBATH( std::istream &ist, const std::string &header, const std::string &theZCZCline );
+  bool doTIDE( std::istream &ist, const std::string &header, const std::string &theZCZCline );
+  bool doBUFR_SURFACE( std::istream &ist, const std::string &header, const std::string &theZCZCline );
 
   std::ostringstream errorStr;
   std::ostringstream notMatchedInGetMessage;

@@ -61,6 +61,7 @@ using miutil::conf::CIValElementList;
 namespace fs=boost::filesystem;
 namespace pt=boost::posix_time;
 
+extern string progname;
 
 namespace{
 volatile sig_atomic_t sigTerm=0;
@@ -118,12 +119,16 @@ getRaportConf( ConfSection   *myConf ) {
          raports.push_back( make_pair( decoder, wmoraport::TEMP ) );
       else if( reportType == "TIDE" )
          raports.push_back( make_pair( decoder, wmoraport::TIDE ) );
+      else if( reportType == "BUFR_SURFACE" )
+    	  raports.push_back( make_pair( decoder, wmoraport::BUFR_SURFACE ) );
       else
          LOGWARN( "Param <raports>: Unknown wmo raport '" << val << "'.");
    }
 
-   if( raports.empty() )
+   if( raports.empty() ) {
       raports.push_back( make_pair("synop", wmoraport::SYNOP ) );
+      raports.push_back( make_pair("bufr", wmoraport::BUFR_SURFACE ) );
+   }
 
    return raports;
 }
@@ -187,7 +192,7 @@ App::App(int argn,
    ValElementList    valelem;
 
    if(!myConf){
-      LOGFATAL("Cant read the configuration file <" << kvPath("sysconfdir") + "/norcom2kv.conf>");
+      LOGFATAL("Cant read the configuration file <" << kvPath("sysconfdir") + "/" + progname +".conf>");
       exit(1);
    }
 
@@ -526,7 +531,7 @@ App::readFInfoList(const std::string &name, FInfoList &infoList)
    ifstream fist(name.c_str());
    string   line;
 
-   milog::LogContext cntxt("Init from file: norcom2kv_finfo.dat !");
+   milog::LogContext cntxt("Init from file: "+progname +"_finfo.dat !");
 
    if(!fist){
       LOGINFO("No file information file!");
@@ -616,28 +621,6 @@ getDecoder( wmoraport::WmoRaport raportType ) const
    return "";
 }
 
-/*
-std::string 
-App::
-relpath(const std::string &path_, bool kvalobs)
-{
-  string path(path_);
-  string::size_type i=path.find(kvdir());
-
-  if(i==string::npos)
-    return path;
-
-  if(i!=0)
-    return path;
-
-  if(kvalobs)
-    path.replace(0, kvdir().length(), "$KVALOBS/");
-  else
-    path.erase(0, kvdir().length());
-
-  return path;
-}
- */
 namespace{
 void
 sig_term(int)
@@ -676,7 +659,7 @@ void
 usage()
 {
    LOGFATAL(" \n\nUSE \n\n" <<
-            "   norcom2kv OPTIONS \n"
+            "   " << progname << " OPTIONS \n"
             "     OPTIONS: \n"
             "       --test  [Use this to save additonal files to 'tmpdir'.\n"
             "                This files can be used for regression testing]\n"

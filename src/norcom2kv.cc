@@ -36,7 +36,12 @@
 #include <milog/milog.h>
 #include "CorbaThread.h"
 #include "InitLogger.h"
+#include "decodeArgv0.h"
 #include <kvalobs/kvPath.h>
+
+using namespace std;
+
+string progname;
 
 int
 main(int argn, char **argv)
@@ -45,13 +50,15 @@ main(int argn, char **argv)
   std::string pidfile;
   CorbaThread *corbaThread;
   int         ret;
+  progname=getCmdNameFromArgv0( argv[0] );
 
-  InitLogger(argn, argv, "norcom2kv");
 
-  pidfile = dnmi::file::createPidFileName( kvPath("rundir"), "norcom2kv" );
+  InitLogger(argn, argv, progname );
+
+  pidfile = dnmi::file::createPidFileName( kvPath("rundir"), progname );
   dnmi::file::PidFileHelper pidFile;
 
-  App::setConfFile("norcom2kv.conf");
+  App::setConfFile( progname+".conf" );
   App app(argn, argv);
 
 
@@ -76,7 +83,7 @@ main(int argn, char **argv)
 	       << std::endl << "restart it." << std::endl << std::endl);
       return 1;
     }else{
-      LOGFATAL("Is norcom2kv allready running?" << std::endl
+      LOGFATAL("Is '" << progname << "' allready running?" << std::endl
 	       << "If not remove the pidfile: " << pidfile);
       return 1;
     }

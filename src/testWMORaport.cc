@@ -33,6 +33,7 @@
 #include <sstream>
 #include <boost/assign.hpp>
 #include "WMORaport.h"
+#include "decodeArgv0.h"
 
 using namespace std;
 
@@ -42,12 +43,16 @@ readFile(const std::string &filename, std::string &content);
 int
 main(int argn, char **argv)
 {
+	string myName=getCmdNameFromArgv0( argv[0]) ;
+	cerr << "Conffile: " << getConfFileFromArgv0( SYSCONFDIR, argv[0], false ) << endl;
+	cerr << "progname: " << myName << endl;
+
    wmoraport::WmoRaports whatToCollect;
   WMORaport wmo;
   string    raport;
 
   if(argn<2){
-    cout << "Bruk\n\ttestWMORaport filename\n\n";
+    cout << "\nBruk\n\n\t" << myName << " filename\n\n";
     return 1;
   }
 
@@ -58,7 +63,7 @@ main(int argn, char **argv)
 
   //  cout << raport;
   
-  boost::assign::insert( whatToCollect )(wmoraport::SYNOP)(wmoraport::METAR);
+  boost::assign::insert( whatToCollect )(wmoraport::SYNOP)(wmoraport::METAR)(wmoraport::BUFR_SURFACE);
 
   if(!wmo.split(raport, whatToCollect )){
     cerr << wmo.error() << endl;
@@ -75,20 +80,53 @@ main(int argn, char **argv)
 bool
 readFile(const std::string &filename, std::string &content)
 {
-  ifstream fist(filename.c_str());
-  string buf;
-  ostringstream ost;
+	const int N=256;
+	bool error = false;
+	ifstream fist(filename.c_str(),  ios_base::binary | ios_base::in);
+	char buf[N];
+	int n;
+	int size=0;
+	int zerros=0;
+	ostringstream ost(ios_base::binary | ios_base::out);
 
-  content.clear();
+	ost.exceptions(std::fstream::failbit | std::fstream::badbit );
 
-  if(!fist){
-    return false;
-  }
-    
-  while(getline(fist, buf)){
-    ost << buf << endl;
-  }
-  
-  content=ost.str();
-  return true;
+	content.clear();
+
+	if(!fist){
+		return false;
+	}
+
+	while( ! fist.eof() && !fist.fail() ) {
+		fist.read(buf, N);
+		n=fist.gcount();
+
+		if( n > 0 ) {
+			for( int i=0; i<n; ++i ) {
+				if( buf[i]=='\0' )
+					++zerros;
+			}
+
+			try {
+				ost.write( buf, n );
+				size += n;
+			}
+			catch( const std::exception &ex ) {
+				cerr << "Exception: " << ex.what() << " size: " << size << " zeros: " << zerros << " n=" << n<< endl;
+				error = true;
+				break;
+			}
+
+		}
+	}
+
+	if( error && !fist.eof() ) {
+		cerr << "ERROR error: " << (error?"true":"false")<< " ! eof" << endl;
+		return false;
+	}
+
+	content=ost.str();
+
+	cerr << "Content: size: " << content.size() << " readN: " << size << " zeros: " << zerros << endl;
+	return true;
 }

@@ -34,6 +34,8 @@
 
 using namespace std;
 
+extern string progname;
+
 CorbaThread::CorbaThread(App &app_)
   :omni_thread(), app(app_), isInitialized_(false)
 {
@@ -54,7 +56,7 @@ CorbaThread::run_undetached(void*)
 
     CORBA::Object_var ref = admImpl->_this();
     
-    if(!app.putRefInNS(ref, "norcom2kv")){
+    if(!app.putRefInNS(ref, progname )){
       LOGFATAL("FATAL: can't register with CORBA nameserver!\n");
       return 0;
     }
