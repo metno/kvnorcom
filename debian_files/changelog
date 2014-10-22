@@ -1,3 +1,9 @@
+norcom2kv (2.4.4~RC5-1) lucid; urgency=low
+  
+  * Add support for BUFR and binary files. Binary files is base64 encoded.
+   
+ -- Kvalobs <kvalobs@met.no>  Wed, 22 Oct 2014 20:30:00 +0200
+
 norcom2kv (2.4.4~RC4-1) lucid; urgency=low
 
   * New configuration parameter, ignore_files_before, that ignore files
