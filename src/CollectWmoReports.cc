@@ -208,6 +208,9 @@ CollectWmoReports::sendMessageToKvalobs(const std::string &msg,
 		string msg(res->message);
 		string::size_type i=msg.find("unknown station/position");
 
+		if( i == string::npos )
+			i = msg.find("Missing or unknown stationid!");
+
 		tryToResend=false;
 
 		//Dont log Unknown station/position. Treat it as a
