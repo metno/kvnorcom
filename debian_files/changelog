@@ -1,3 +1,9 @@
+norcom2kv (2.4.4-1) lucid; urgency=low
+  
+  * New release. No Changes since last RC.
+   
+ -- Kvalobs <kvalobs@met.no>  Thu, 30 Oct 2014 13:15:00 +0100
+
 norcom2kv (2.4.4~RC5-1) lucid; urgency=low
   
   * Add support for BUFR and binary files. Binary files is base64 encoded.
