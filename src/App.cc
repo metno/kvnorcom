@@ -122,7 +122,7 @@ getRaportConf( ConfSection   *myConf ) {
       else if( reportType == "BUFR_SURFACE" )
     	  raports.push_back( make_pair( decoder, wmoraport::BUFR_SURFACE ) );
       else
-         LOGWARN( "Param <raports>: Unknown wmo raport '" << val << "'.");
+         LOGWARN( "Param <raports>: Unknown wmo raport '" << reportType << "' (" << val << ").");
    }
 
    if( raports.empty() ) {
@@ -130,6 +130,12 @@ getRaportConf( ConfSection   *myConf ) {
       raports.push_back( make_pair("bufr", wmoraport::BUFR_SURFACE ) );
    }
 
+   ostringstream ost;
+   ost << "Defined decoders:";
+   BOOST_FOREACH( App::RaportDefValue v, raports ) {
+	   ost << "\n    " << v.first << ":" << v.second;
+   }
+   LOGINFO( ost.str() );
    return raports;
 }
 
