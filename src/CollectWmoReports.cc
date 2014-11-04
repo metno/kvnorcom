@@ -232,7 +232,7 @@ CollectWmoReports::sendMessageToKvalobs(const std::string &msg,
 int 
 CollectWmoReports::run()
 {
-	const  int DELAY=5;
+	const  int DELAY=3;
 	const  int RESEND_DELAY=60;
 	time_t  tNow;
 	time_t  newObsCheckTime=0;
