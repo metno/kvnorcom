@@ -396,6 +396,7 @@ doMETAR( std::istream &ist, const std::string &header, const std::string &theZCZ
 	} while( readReport( ist, line ) );
 
 	removeEmptyKeys( metar_ );
+	return true;
 }
 
 bool
@@ -411,6 +412,7 @@ WMORaport::
 doPILO( std::istream &ist, const std::string &header, const std::string &theZCZCline )
 {
 	errorStr << "PILO: not implemented: " << header << endl;
+	return true;
 }
 
 bool
