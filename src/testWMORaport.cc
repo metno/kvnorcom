@@ -31,25 +31,42 @@
 #include <iostream> 
 #include <fstream>
 #include <sstream>
+#include <utility>
 #include <boost/assign.hpp>
+#include <boost/foreach.hpp>
 #include "WMORaport.h"
 #include "decodeArgv0.h"
 
 using namespace std;
 
+
+typedef std::pair<std::string, wmoraport::WmoRaport> RaportDefValue;
+typedef std::list< RaportDefValue > RaportDef;
+
+
 bool
 readFile(const std::string &filename, std::string &content);
+
+std::string
+getDecoder( wmoraport::WmoRaport raportType, const RaportDef &raports);
+
+void
+printWmoRaport(const WMORaport &wmoRaports,
+		       const wmoraport::WmoRaports &whatToCollect,
+		       const RaportDef &rapDef);
+
 
 int
 main(int argn, char **argv)
 {
 	string myName=getCmdNameFromArgv0( argv[0]) ;
-	cerr << "Conffile: " << getConfFileFromArgv0( SYSCONFDIR, argv[0], false ) << endl;
-	cerr << "progname: " << myName << endl;
+//	cerr << "Conffile: " << getConfFileFromArgv0( SYSCONFDIR, argv[0], false ) << endl;
+//	cerr << "progname: " << myName << endl;
 
    wmoraport::WmoRaports whatToCollect;
   WMORaport wmo;
   string    raport;
+  RaportDef rapDef;
 
   if(argn<2){
     cout << "\nBruk\n\n\t" << myName << " filename\n\n";
@@ -64,17 +81,79 @@ main(int argn, char **argv)
   //  cout << raport;
   
   boost::assign::insert( whatToCollect )(wmoraport::SYNOP)(wmoraport::METAR)(wmoraport::BUFR_SURFACE);
-
+  boost::assign::push_back( rapDef )( make_pair(string("bufr"), wmoraport::BUFR_SURFACE ) )
+		  (make_pair(string("metar"), wmoraport::METAR) )(make_pair(string("synop"),wmoraport::SYNOP));
   if(!wmo.split(raport, whatToCollect )){
     cerr << wmo.error() << endl;
   }
- 
- cout << wmo << endl;
+
+  printWmoRaport( wmo, whatToCollect, rapDef );
+  //cout << wmo << endl;
 
  cout << " ------- ERROR BEGIN ---------- " << endl;
  cerr << wmo.error() << endl;
  cout << " ------- ERROR END ---------- " << endl;
 }
+
+std::string
+getDecoder( wmoraport::WmoRaport raportType, const RaportDef &raports)
+{
+   BOOST_FOREACH( RaportDefValue v, raports) {
+      if( v.second == raportType )
+         return v.first;
+   }
+
+   return "";
+}
+
+
+
+void
+printWmoRaport(const WMORaport &wmoRaports,
+		       const wmoraport::WmoRaports &whatToCollect,
+		       const RaportDef &rapDef)
+{
+	ostringstream        ost;
+
+	WMORaport::MsgMapsList raports;
+	bool                 kvServerIsUp;
+	bool                 tryToResend;
+	string decoder;
+	string theDecoder;
+	ostringstream ostDecoder;
+	raports=wmoRaports.getRaports( whatToCollect );
+
+	BOOST_FOREACH(WMORaport::MsgMapsList::value_type raport, raports ) {
+		theDecoder = getDecoder( raport.first, rapDef );
+
+		if( theDecoder.empty() ) {
+			cerr << "No decoder defined for wmo report <" << raport.first << ">. Cant send data to kvalobs." << endl;
+			continue;
+		}
+
+		BOOST_FOREACH( WMORaport::MsgMap::value_type msgValList, *raport.second ) {
+			ostDecoder.str("");
+			ostDecoder << theDecoder;
+			if( ! msgValList.first.decoderExtra.empty() )
+				ostDecoder << "/"<<msgValList.first.decoderExtra;
+
+			decoder = ostDecoder.str();
+
+			BOOST_FOREACH( WMORaport::MsgList::value_type msg, msgValList.second ){
+				ost.str("");
+
+				if( msgValList.first.addWhatInFront )
+					ost << msgValList.first.what << " " << endl << msg;
+				else
+					ost << msg;
+
+				cerr << "-------- To Send -----------------------------\n";
+				cerr << decoder << "\n" <<ost.str() << "\n\n" << endl;
+				cerr << "-------- End Send ----------------------------\n";			}
+		}
+	}
+}
+
 
 
 bool
