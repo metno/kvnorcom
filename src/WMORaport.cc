@@ -66,7 +66,7 @@ using namespace boost;
 namespace{
 
 regex zczc("^ *ZCZC *[0-9]*\\r+");
-regex synopType("(^ *((AA|BB|OO)XX +(\\d{4}.)? *(\\w+)?))?(.*)");
+regex synopType("(^ *((AA|BB|OO)XX *(\\d{4}.)? *(\\w+)?))?(.*)");
 regex synopIsNil("^\\s*(\\d+)? *NIL *=?\\s*");
 regex metarType("(^ *(METAR|SPECI))?(.*)");
 //regex metarType("^ *(METAR|SPECI) *");
@@ -188,14 +188,34 @@ findZCZC( std::istream &ist, std::string &theZCZCline )
 
 }
 
+std::string
+wmoraportToString( wmoraport::WmoRaport raport )
+{
+	using namespace  wmoraport;
+	switch( raport ) {
+	case SYNOP:          return "SYNOP";
+	case METAR:          return "METAR";
+	case TEMP:           return "TEMP";
+	case PILO:           return "PILO";
+	case AREP:           return "AREP";
+	case DRAU:           return "DRAU";
+	case BATH:           return "BATH";
+	case TIDE:           return "TIDE";
+	case BUFR_SURFACE:   return "BUFR_SURFACE";
+	default:
+		return "UNKNOWN";
+	}
+}
+
+
 WMORaport::WMORaport(bool warnAsError_):
-		  warnAsError(warnAsError_)
+				  warnAsError(warnAsError_)
 {
 }
 
 WMORaport::WMORaport(const WMORaport &r):
-        												synop_(r.synop_),temp_(r.temp_), metar_(r.metar_), pilo_(r.pilo_),
-        												arep_(r.arep_), drau_(r.drau_),bath_(r.bath_), tide_(r.tide_)
+        														synop_(r.synop_),temp_(r.temp_), metar_(r.metar_), pilo_(r.pilo_),
+        														arep_(r.arep_), drau_(r.drau_),bath_(r.bath_), tide_(r.tide_)
 {
 }
 
@@ -233,10 +253,10 @@ skipEmptyLines( std::istream &ist )const
 		if( ist.get( ch ).fail() && ! ist.eof())
 			break;;
 
-		if( isalnum(ch) || ch==' ') {
+		if( isalnum(ch) || validChar(ch, " /=")) {
 			line << ch;
 		} else {
-			skip( ist, " \t\r\n" );
+			skip( ist, "\t\r\n" );
 			break;
 		}
 	}
@@ -326,10 +346,11 @@ doSYNOP( std::istream &ist, const std::string &header, const std::string &theZCZ
 				else skip = false;
 			}
 
-			line = what[6];
 
+			line = what[6];
 			if( line.empty() )
 				continue;
+
 
 			if( ! skip && ! ident.empty()  ) {
 				boost::trim( line );
@@ -544,8 +565,10 @@ getMessage( std::istream &ist, std::ostream &msg, std::string &theZCZCline )
 
 	//Search for the start of message (ZCZC nnn).
 	//nnnn is optional.
-	if( ! findZCZC( ist, theZCZCline ) )
+	if( ! findZCZC( ist, theZCZCline ) ) {
+		cerr << "Cant find ZCZC"<< endl;
 		return false;
+	}
 
 	//Search for the end mark (NNNN).
 	while( !ist.eof() ) {
@@ -574,14 +597,18 @@ getMessage( std::istream &ist, std::ostream &msg, std::string &theZCZCline )
 				prevCh = ch;
 
 				if( ist.get( ch ).fail()  ) {
-					return false;
+					if( rnCount > 0 && ist.eof() ) {
+						buf=ost.str();
+						///Remove the last count chars from the buf, this is \n\n\n\n\n\n\nNNNN\r\r\n.
+						buf.erase( buf.size() - count );
+						msg << buf;
+						return true;
+					} else {
+						return false;
+					}
 				}
 
-				if( validChar( ch, "\r\n") ) {
-					++rnCount;
-					++count;
-					ost << ch;
-				} else if( prevCh == '\n' && rnCount > 0 ) {
+				if( prevCh == '\n' && rnCount > 0 ) {
 					ist.putback( ch );
 					buf=ost.str();
 
@@ -589,14 +616,14 @@ getMessage( std::istream &ist, std::ostream &msg, std::string &theZCZCline )
 					buf.erase( buf.size() - count );
 					msg << buf;
 					return true;
+				} else if( validChar( ch, "\r\n") ) {
+					++rnCount;
+					++count;
+					ost << ch;
 				} else {
-					break;
+					return false;
 				}
 			}
-			return false;
-			iNNN=0;
-			rnCount=0;
-			count=0;
 		}
 	}
 

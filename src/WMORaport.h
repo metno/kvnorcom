@@ -42,6 +42,9 @@ typedef enum{SYNOP, METAR, TEMP, PILO,AREP, DRAU, BATH, TIDE,
 typedef std::set<WmoRaport> WmoRaports;
 }
 
+std::string
+wmoraportToString( wmoraport::WmoRaport raport );
+
 struct MsgInfo {
 	std::string what;
 	std::string decoderExtra;
