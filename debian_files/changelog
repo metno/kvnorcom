@@ -1,3 +1,10 @@
+norcom2kv (2.4.5-1) lucid; urgency=low
+  
+  * New release. 
+  * Fix a bug in the splitting of SYNOP reports.
+   
+ -- Kvalobs <kvalobs@met.no>  Tue, 4 Nov 2014 14:15:00 +0100
+
 norcom2kv (2.4.4-1) lucid; urgency=low
   
   * New release. No Changes since last RC.
