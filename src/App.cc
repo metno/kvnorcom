@@ -35,21 +35,21 @@
 #include <signal.h> 
 #include <string.h>
 #include <utility>
-#include <boost/regex.hpp>
-#include <boost/foreach.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/algorithm/string.hpp>
-#include <boost/filesystem.hpp>
-#include <milog/milog.h>
-#include <miutil/timeconvert.h>
-#include "App.h"
 #include <fstream>
-#include <miconfparser/miconfparser.h>
 #include <sstream>
-#include <kvalobs/kvPath.h>
+#include "boost/regex.hpp"
+#include "boost/foreach.hpp"
+#include "boost/lexical_cast.hpp"
+#include "boost/algorithm/string.hpp"
+#include "boost/filesystem.hpp"
+#include "milog/milog.h"
+#include "miutil/timeconvert.h"
+#include "miconfparser/miconfparser.h"
+#include "kvalobs/kvPath.h"
+#include "kvsubscribe/HttpSendData.h"
+#include "App.h"
 
 using namespace std;
-using namespace CKvalObs::CDataSource;
 using namespace milog;
 using namespace boost;
 
@@ -176,15 +176,25 @@ createDir( std::string &dir )
       dir += "/";
 }
 
+TKvDataSrcList getKvServers(ConfSection *conf){
+  TKvDataSrcList kvservers;
+
+  for( ValElement &e: conf->getValue("kvservers"))
+    kvservers.push_back(e.valAsString());
+
+  if(kvservers.empty())
+    kvservers.push_back("");  // So kvservers.front(), does'nt crash.
+  return kvservers;
+}
 }
 
 
 App::App(int argn, 
-         char **argv,
-         const char *options[0][2])
-:KvApp(argn, argv, options), refData(Data::_nil()),test_(false),
- debug_(false)
-{
+         char **argv )
+  :KvBaseApp( argn, argv),test_(false),
+   refDataList(getKvServers(App::getConfiguration())),
+   debug_(false),
+   http(refDataList.front()){
    string::size_type i;
    string::size_type i2;
    string            arg;
@@ -303,42 +313,20 @@ App::App(int argn,
    if(myConf)
       raports = getRaportConf( myConf );
 
-
-   /**
-   * COMMENT:
-   * The kvalobsservers we shall send observation to is given
-   * in the conf file $KVALOBS/etc/norcom2kv.conf.
-   */
-
-   if(myConf){
-      valelem=myConf->getValue("corba.kvservers");
-
-      CIValElementList it=valelem.begin();
-
-      for(;it!=valelem.end(); it++){
-         refDataList.push_back(KvDataSrc(it->valAsString()));
-      }
-   }
-
-   if(refDataList.empty()){
+   if(refDataList.empty() || (refDataList.size()==1 && refDataList.front().empty())){
       LOGFATAL("At least one server to receive data must be specified!" << endl
                << "Servers is set up in the configuration file" <<endl <<
                "norcom2kv.conf!");
       exit(1);
    }
 
-   kvservers.erase();
+   ostringstream ost;
+   for( string &server: refDataList)
+     ost << " " << server;
 
-   for(CITKvDataSrcList it=refDataList.begin();
-         it!=refDataList.end(); it++){
-      kvservers+=" ";
-      kvservers+=it->name();
-   }
+   LOGINFO("Pushing data to kvDataInputd on: " << ost.str());
 
-   LOGINFO("Pushing data to kvDataInputd in the following paths in the\n" <<
-           "CORBA nameserver:\n" << kvservers);
-
-
+   refDataList.pop_front(); // This server is all ready configured with the http client.
 
    setSigHandlers();
 }
@@ -383,118 +371,38 @@ App::checkdir(const std::string &dir_, bool rwaccess)
 }
 
 
-Result* 
+kvalobs::datasource::Result
 App::sendDataToKvalobs(const std::string &message, 
                        const std::string &obsType,
-                       std::string &sendtTo)
+                       std::string &sentTo)
 {
-   ITKvDataSrcList it=refDataList.begin();
-   Data_ptr ptrData;
-   bool     forceNS=false;
-   bool     usedNS;
-   Result   *resToReturn=0;
-   Result   *res;
-   ostringstream ost;
+  kvalobs::datasource::Result resToReturn;
+  ostringstream ost;
+  try {
+    ost << http.host();
+    resToReturn = http.newData(message, obsType);
+  }
+  catch( const std::exception &ex) {
+    resToReturn.res = kvalobs::datasource::ERROR;
+    resToReturn.message=ex.what();
+    ost << " (FAILED)";
+  }
 
-   if(message.empty() || obsType.empty()){
-      LOGERROR("INTERNAL: Invalid input message or obstype not given!");
-      return 0;
-   }
+  for( string &server : refDataList ) {
+    try {
+      ost << ", " << server;
+      resToReturn = http.newData(server, message, obsType);
+    }
+    catch( const std::exception &ex) {
+      ost << " (FAILED)";
+    }
+  }
 
-   for(;it!=refDataList.end(); it++){
-      forceNS=false;
-
-      if(it==refDataList.begin())
-         ost << "*" << it->name();
-      else
-         ost << ", " <<it->name();
-
-      for(int i=0; i<2; i++){
-         ptrData=lookUpKvData(forceNS, usedNS, it->name());
-
-         if(CORBA::is_nil(ptrData)){
-            ost << " (FAILED)";
-            break;
-         }
-
-         try{
-            res=ptrData->newData(message.c_str(), obsType.c_str());
-
-            if(it==refDataList.begin()){
-               resToReturn=res;
-            }else{
-               delete res;
-            }
-
-            ost << " (OK)";
-            break;  //out of this for loop
-         }
-         catch(...){
-            if(usedNS){
-               ost << " (FAILED)";
-               break;
-            }
-            forceNS=true;
-         }
-      }
-   }
-
-   sendtTo=ost.str();
-
-   return resToReturn;
+  sentTo = ost.str();
+  return resToReturn;
 }
 
 
-
-CKvalObs::CDataSource::Data_ptr 
-App::lookUpKvData(bool forceNS, 
-                  bool &usedNS,
-                  const std::string &kvpath_)
-
-{
-   CORBA::Object_var obj;
-   Data_ptr ptr;
-
-   ITKvDataSrcList it=refDataList.begin();
-
-   for(;it!=refDataList.end(); it++){
-      if(it->name()==kvpath_)
-         break;
-   }
-
-   if(it==refDataList.end()){
-      return Data::_nil();
-   }
-
-   ptr = it->ref();
-
-   usedNS=false;
-
-   while(true){
-      if(forceNS){
-         usedNS=true;
-
-         obj=getRefInNS("kvinput", it->name());
-
-         if(CORBA::is_nil(obj))
-            return Data::_nil();
-
-         ptr=Data::_narrow(obj);
-
-         if(CORBA::is_nil(ptr))
-            return Data::_nil();
-
-         it->ref(ptr);
-
-         return ptr;
-      }
-
-      if(CORBA::is_nil(ptr))
-         forceNS=true;
-      else
-         return it->ref();
-   }
-}
 
 bool
 App::saveFInfoList(const std::string &name, const FInfoList &infoList)
@@ -581,19 +489,6 @@ App::doShutdown()
 {
    sigTerm=1;
 }
-
-
-
-std::string 
-App::getKvalobsServer()const
-{
-   if(refDataList.empty())
-      return string();
-
-   return refDataList.front().name();
-}
-
-
 
 bool 
 App::inShutdown()const

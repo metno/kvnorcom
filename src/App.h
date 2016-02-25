@@ -33,21 +33,21 @@
 
 #include <string>
 #include <map>
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <kvskel/datasource.hh>
-#include <kvalobs/kvapp.h>
+#include "boost/date_time/posix_time/posix_time.hpp"
+#include "kvsubscribe/SendData.h"
+#include "kvsubscribe/HttpSendData.h"
+#include "kvalobs/kvbaseapp.h"
 #include "WMORaport.h"
 #include "FInfo.h"
 #include "kvDataSrcList.h"
 
-class App : public KvApp
+class App : public KvBaseApp
 {
 public:
    typedef std::pair<std::string, wmoraport::WmoRaport> RaportDefValue;
-   typedef std::list< RaportDefValue > RaportDef;
+   typedef std::list<RaportDefValue> RaportDef;
 
 private:
-  CKvalObs::CDataSource::Data_var refData;
   std::string synopdir_;
   std::string tmpdir_;
   std::string data2kvdir_;
@@ -56,25 +56,21 @@ private:
   TKvDataSrcList refDataList;
   bool          debug_;
   RaportDef  raports;
+  kvalobs::datasource::HttpSendData http;
 
   void initLogger(const std::string &ll, const std::string &tl);
 
  public:
   boost::posix_time::ptime ignoreFilesBeforeStartup;
 
-  App(int argn, char **argv, const char *options[0][2]=0);
+  App(int argn, char **argv);
   virtual ~App();
 
-  CKvalObs::CDataSource::Data_ptr 
-    lookUpKvData(bool forceNS, 
-		 bool &usedNS,
-		 const std::string &kvpath_);
-
-
-   CKvalObs::CDataSource::Result 
-     *sendDataToKvalobs(const std::string &message, 
-			const std::string &obsType,
-			std::string &sendtTo);
+  /**
+   *
+   * @throws When data can't be sent.
+   */
+  kvalobs::datasource::Result sendDataToKvalobs(const std::string &message, const std::string &obsType, std::string &sendtTo);
 
    bool saveFInfoList(const std::string &name, const FInfoList &infoList);
    bool readFInfoList(const std::string &name, FInfoList &infoList);
@@ -98,15 +94,6 @@ private:
     * \return dir with a '/' appended if neccessary.
     */
    std::string checkdir(const std::string &dir, bool rwaccess=false);
-
-
-   /**
-    * getKvalobsServer, return the name of the main kvalobs server.
-    * The main kvalobs server is the name of the server in CORBA nameserver
-    * that is the production server.
-    */
-   std::string getKvalobsServer()const;
-   
 
    /**
     * remove the kvpath() from the beginning of the path.

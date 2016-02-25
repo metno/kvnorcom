@@ -55,23 +55,11 @@ main(int argn, char **argv)
 
   InitLogger(argn, argv, progname );
 
-  pidfile = dnmi::file::createPidFileName( kvPath("rundir"), progname );
+  pidfile = dnmi::file::createPidFileName( kvalobs::kvPath(kvalobs::rundir), progname );
   dnmi::file::PidFileHelper pidFile;
 
   App::setConfFile( progname+".conf" );
   App app(argn, argv);
-
-
-  try{
-    corbaThread  = new CorbaThread(app);
-  }
-  catch(...){
-    LOGFATAL("FATAL: failed to initialize KVALOBS service interface!!");
-    exit(1);
-  }
-  
-  while(!corbaThread->isInitialized())
-    sleep(1);
   
   
   if(dnmi::file::isRunningPidFile(pidfile, error)){
@@ -90,18 +78,8 @@ main(int argn, char **argv)
   }
 
   CollectWmoReports collectSynop(app);
-
- 
   pidFile.createPidFile(pidfile);
-
-  omniORB::setClientCallTimeout(120000);
-
   ret=collectSynop.run();
-  
-  CorbaHelper::CorbaApp::getCorbaApp()->getOrb()->shutdown(true);
-
-  corbaThread->join(0);
-
   return ret;
 
 }
