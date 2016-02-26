@@ -59,6 +59,7 @@ private:
   kvalobs::datasource::HttpSendData http;
 
   void initLogger(const std::string &ll, const std::string &tl);
+  void options(int argn, char **argv);
 
  public:
   boost::posix_time::ptime ignoreFilesBeforeStartup;

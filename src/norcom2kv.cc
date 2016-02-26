@@ -50,17 +50,14 @@ main(int argn, char **argv)
   std::string pidfile;
   CorbaThread *corbaThread;
   int         ret;
-  progname=getCmdNameFromArgv0( argv[0] );
-
-
-  InitLogger(argn, argv, progname );
-
-  pidfile = dnmi::file::createPidFileName( kvalobs::kvPath(kvalobs::rundir), progname );
   dnmi::file::PidFileHelper pidFile;
 
+  progname=getCmdNameFromArgv0( argv[0] );
   App::setConfFile( progname+".conf" );
+  InitLogger(argn, argv, App::getConfiguration(), progname);
+  pidfile = dnmi::file::createPidFileName( kvalobs::kvPath(kvalobs::rundir), progname );
+
   App app(argn, argv);
-  
   
   if(dnmi::file::isRunningPidFile(pidfile, error)){
     if(error){
@@ -76,9 +73,8 @@ main(int argn, char **argv)
       return 1;
     }
   }
-
-  CollectWmoReports collectSynop(app);
   pidFile.createPidFile(pidfile);
+  CollectWmoReports collectSynop(app);
   ret=collectSynop.run();
   return ret;
 

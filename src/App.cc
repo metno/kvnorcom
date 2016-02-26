@@ -74,7 +74,7 @@ void usage();
 namespace {
 
 App::RaportDef
-getRaportConf( ConfSection   *myConf ) {
+getRaportConf( ConfSection *myConf ) {
    App::RaportDef raports;
    App::RaportDefValue rapVal;
    string::size_type i;
@@ -83,7 +83,7 @@ getRaportConf( ConfSection   *myConf ) {
    string decoder;
    ValElementList valelem=myConf->getValue("raports");
 
-   BOOST_FOREACH( ValElement raport, valelem ) {
+   for ( ValElement &raport : valelem ) {
       val = raport.valAsString();
 
       i = val.find(":");
@@ -132,9 +132,10 @@ getRaportConf( ConfSection   *myConf ) {
 
    ostringstream ost;
    ost << "Defined decoders:";
-   BOOST_FOREACH( App::RaportDefValue v, raports ) {
+
+   for( App::RaportDefValue &v : raports )
 	   ost << "\n    " << v.first << ":" << v.second;
-   }
+
    LOGINFO( ost.str() );
    return raports;
 }
@@ -142,14 +143,9 @@ getRaportConf( ConfSection   *myConf ) {
 string
 getDir( ConfSection *conf, const char *key )
 {
-   string val;
-   ValElementList valelem=conf->getValue( key );
-
-   if(valelem.size()>0) {
-      val = boost::trim_copy( valelem[0].valAsString() );
-      if( val.rbegin() != val.rend() && *val.rbegin() != '/')
-         val += "/";
-   }
+   string val = boost::trim_copy(conf->getValue( key ).valAsString(""));
+   if( val.rbegin() != val.rend() && *val.rbegin() != '/')
+     val += "/";
 
    return val;
 }
@@ -179,15 +175,27 @@ createDir( std::string &dir )
 TKvDataSrcList getKvServers(ConfSection *conf){
   TKvDataSrcList kvservers;
 
-  for( ValElement &e: conf->getValue("kvservers"))
-    kvservers.push_back(e.valAsString());
+  if( !conf ){
+    kvservers.push_back("");
+  } else {
+    for( ValElement &e: conf->getValue("kvservers"))
+      kvservers.push_back(e.valAsString());
 
-  if(kvservers.empty())
-    kvservers.push_back("");  // So kvservers.front(), does'nt crash.
+    if(kvservers.empty())
+      kvservers.push_back("");  // So kvservers.front(), does'nt crash.
+  }
   return kvservers;
 }
 }
 
+void App::options(int argn, char **argv)
+{
+  for (int k=1; k<argn; k++){
+     if (string(argv[k])=="--test"){
+        test_=true;
+     }
+  }
+}
 
 App::App(int argn, 
          char **argv )
@@ -195,138 +203,57 @@ App::App(int argn,
    refDataList(getKvServers(App::getConfiguration())),
    debug_(false),
    http(refDataList.front()){
-   string::size_type i;
-   string::size_type i2;
-   string            arg;
-   string            key;
-   string            val;
-   char              *buf;
    string            kvservers;
-   string            loglevel;
-   string            tracelevel;
    ConfSection       *myConf=App::getConfiguration();
-   ValElementList    valelem;
 
    if(!myConf){
       LOGFATAL("Cant read the configuration file <" << kvPath("sysconfdir") + "/" + progname +".conf>");
       exit(1);
    }
 
-   for(int k=1; k<argn; k++){
-      arg=argv[k];
-      i=arg.find_first_of("=");
-
-      if(i!=string::npos){
-         key=arg.substr(0, i);
-         val=arg.substr(i+1);
-      }else{
-         key=arg;
-         val.erase();
-      }
-
-      //LOGDEBUG("Key=" << key << "  val=" << val << endl);
-
-      if(key=="--tracelevel"){
-         tracelevel=val;
-      }else if(key=="--loglevel"){
-         loglevel=val;
-      }else if(key=="--test"){
-         test_=true;
-      }else{
-         LOGWARN("Unknown option: " << key <<
-                 (!val.empty()?string("="+val):"")
-                 << endl);
-      }
+   if(refDataList.empty() || (refDataList.size()==1 && refDataList.front().empty())){
+     LOGFATAL("At least one server to receive data must be specified!" << endl
+              << "Servers is set up in the configuration file" <<endl <<
+              "norcom2kv.conf!");
+     exit(1);
+   } else {
+      ostringstream ost;
+      for( string &server: refDataList)
+        ost << " " << server;
+      LOGINFO("Pushing data to kvDataInputd on: " << ost.str());
+      refDataList.pop_front(); // This server is all ready configured with the http client.
    }
 
-   if(myConf){
-      valelem=myConf->getValue("debug");
-      if(valelem.size()>0){
-         string tmp;
-         tmp=valelem[0].valAsString();
 
-         if(!tmp.empty() && (tmp[0]=='t' || tmp[0]=='T'))
-            debug_=true;
-         else
-            debug_=false;
-      }
+   debug_ = myConf->getValue("debug").valAsBool(false);
 
-      valelem=myConf->getValue("ignore_files_before_startup");
-
-      if(valelem.size()>0){
-    	  string tmp;
-    	  tmp=valelem[0].valAsString();
-
-    	  if(!tmp.empty() && (tmp[0]=='t' || tmp[0]=='T')) {
-    		  ignoreFilesBeforeStartup = pt::second_clock::universal_time();
-    	  } else {
-    		  ignoreFilesBeforeStartup = pt::ptime( pt::neg_infin );
-    	  }
-      }
-   }
-
+   if (myConf->getValue("ignore_files_before_startup").valAsBool(false))
+     ignoreFilesBeforeStartup = pt::second_clock::universal_time();
+   else
+     ignoreFilesBeforeStartup = pt::ptime( pt::neg_infin );
 
    data2kvdir_=getDir(myConf, "workdir");
 
-   if( data2kvdir_.empty() )
+   if ( data2kvdir_.empty() )
       data2kvdir_ = kvPath("localstatedir", "norcom2kv")+"/data2kv/";
 
-   tmpdir_  = data2kvdir_ + "tmp/";
-   logdir_  = getDir(myConf, "logdir");
+   tmpdir_ = data2kvdir_ + "tmp/";
+   logdir_ = getDir(myConf, "logdir");
 
-   if( logdir_.empty() )
-      logdir_   = kvPath("logdir" );
+   if ( logdir_.empty() )
+     logdir_   = kvPath("logdir" );
 
    createDir( data2kvdir_ );
    createDir( tmpdir_ );
    createDir( logdir_ );
 
-   if(myConf){
-      valelem=myConf->getValue("synopdir");
-      if(valelem.size()==1)
-         synopdir_=valelem[0].valAsString();
+   synopdir_=myConf->getValue("synopdir").valAsString("");
 
+   if(synopdir_.empty())
+     usage();
 
-      if(synopdir_.empty())
-         usage();
-
-      synopdir_=checkdir(synopdir_);
-   }
-
-   if(myConf){
-      valelem=myConf->getValue("loglevel");
-
-      if(valelem.size()==1)
-         loglevel=valelem[0].valAsString();
-      else
-         loglevel="INFO";
-
-      valelem=myConf->getValue("tracelevel");
-
-      if(valelem.size()==1)
-         tracelevel=valelem[0].valAsString();
-      else
-         tracelevel="DEBUG";
-   }
-
-
-   if(myConf)
-      raports = getRaportConf( myConf );
-
-   if(refDataList.empty() || (refDataList.size()==1 && refDataList.front().empty())){
-      LOGFATAL("At least one server to receive data must be specified!" << endl
-               << "Servers is set up in the configuration file" <<endl <<
-               "norcom2kv.conf!");
-      exit(1);
-   }
-
-   ostringstream ost;
-   for( string &server: refDataList)
-     ost << " " << server;
-
-   LOGINFO("Pushing data to kvDataInputd on: " << ost.str());
-
-   refDataList.pop_front(); // This server is all ready configured with the http client.
+   synopdir_=checkdir(synopdir_);
+   raports = getRaportConf( myConf );
 
    setSigHandlers();
 }

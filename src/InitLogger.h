@@ -31,7 +31,9 @@
 #ifndef __initlogger_h__
 #define __initlogger_h__
 
+#include "miconfparser/miconfparser.h"
+
 void
-InitLogger(int argn, char **argv, const std::string &logname);
+InitLogger(int argn, char **argv, miutil::conf::ConfSection *conf, const std::string &logname);
 
 #endif
