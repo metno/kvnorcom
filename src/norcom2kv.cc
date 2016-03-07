@@ -34,7 +34,6 @@
 #include "CollectWmoReports.h"
 #include <fileutil/pidfileutil.h>
 #include <milog/milog.h>
-#include "CorbaThread.h"
 #include "InitLogger.h"
 #include "decodeArgv0.h"
 #include <kvalobs/kvPath.h>
@@ -48,7 +47,6 @@ main(int argn, char **argv)
 {
   bool error;
   std::string pidfile;
-  CorbaThread *corbaThread;
   int         ret;
   dnmi::file::PidFileHelper pidFile;
 
