@@ -1,3 +1,9 @@
+norcom2kv (2.9.2-1) lucid; urgency=low
+  
+  * Remove dependency on libkvsubscribe0. 
+   
+ -- Kvalobs <kvalobs@met.no>  Tue, 15 Mar 2016 15:00:00 +0200
+
 norcom2kv (2.9.1-1) lucid; urgency=low
   
   * Recompile against new DriverManager. 
