@@ -1,3 +1,9 @@
+norcom2kv (3.0.0-1) lucid; urgency=low
+  
+  * New release. 
+   
+ -- Kvalobs <kvalobs@met.no>  Mon, 18 Apr 2016 07:00:00 +0100
+
 norcom2kv (2.9.2-1) lucid; urgency=low
   
   * Remove dependency on libkvsubscribe0. 
