@@ -99,8 +99,7 @@ class FInfo{
   
   	bool   seen()const{ return seen_;}
   	void   seen(bool flag){ seen_=flag;}
-  	void   incSeen(){   seen_++;}
-
+  	
   	bool   collected()const{ return collected_;}
   	void   collected(bool c){ collected_=c;}
 

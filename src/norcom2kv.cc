@@ -34,7 +34,6 @@
 #include "CollectWmoReports.h"
 #include <fileutil/pidfileutil.h>
 #include <milog/milog.h>
-#include "CorbaThread.h"
 #include "InitLogger.h"
 #include "decodeArgv0.h"
 #include <kvalobs/kvPath.h>
@@ -48,31 +47,15 @@ main(int argn, char **argv)
 {
   bool error;
   std::string pidfile;
-  CorbaThread *corbaThread;
   int         ret;
-  progname=getCmdNameFromArgv0( argv[0] );
-
-
-  InitLogger(argn, argv, progname );
-
-  pidfile = dnmi::file::createPidFileName( kvPath("rundir"), progname );
   dnmi::file::PidFileHelper pidFile;
 
+  progname=getCmdNameFromArgv0( argv[0] );
   App::setConfFile( progname+".conf" );
+  InitLogger(argn, argv, App::getConfiguration(), progname);
+  pidfile = dnmi::file::createPidFileName( kvalobs::kvPath(kvalobs::rundir), progname );
+
   App app(argn, argv);
-
-
-  try{
-    corbaThread  = new CorbaThread(app);
-  }
-  catch(...){
-    LOGFATAL("FATAL: failed to initialize KVALOBS service interface!!");
-    exit(1);
-  }
-  
-  while(!corbaThread->isInitialized())
-    sleep(1);
-  
   
   if(dnmi::file::isRunningPidFile(pidfile, error)){
     if(error){
@@ -88,20 +71,9 @@ main(int argn, char **argv)
       return 1;
     }
   }
-
-  CollectWmoReports collectSynop(app);
-
- 
   pidFile.createPidFile(pidfile);
-
-  omniORB::setClientCallTimeout(120000);
-
+  CollectWmoReports collectSynop(app);
   ret=collectSynop.run();
-  
-  CorbaHelper::CorbaApp::getCorbaApp()->getOrb()->shutdown(true);
-
-  corbaThread->join(0);
-
   return ret;
 
 }

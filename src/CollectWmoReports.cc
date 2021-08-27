@@ -47,9 +47,8 @@
 #include <kvalobs/kvPath.h>
 
 using namespace std;
-using namespace CKvalObs::CDataSource;
 using namespace miutil;
-
+using kvalobs::datasource::Result;
 extern string progname;
 
 CollectWmoReports::CollectWmoReports(App &app_)
@@ -176,9 +175,12 @@ CollectWmoReports::sendMessageToKvalobs(const std::string &msg,
 		bool &tryToResend)const
 {
 	string sendtTo;
-	Result* resTmp=app.sendDataToKvalobs(msg, obsType, sendtTo);
+	Result res;
 
-	if(!resTmp){
+	try {
+	  res=app.sendDataToKvalobs(msg, obsType, sendtTo);
+	}
+	catch(const std::exception &x){
 		kvServerIsUp=false;
 		tryToResend=true;
 		LOGERROR("Cant connect to kvalobs. Is kvalobs running?" << endl <<
@@ -188,24 +190,23 @@ CollectWmoReports::sendMessageToKvalobs(const std::string &msg,
 
 	LOGINFO("Sendt to servers: " << sendtTo);
 
-	Result_var res(resTmp);
 	kvServerIsUp=true;
 
-	if(res->res==CKvalObs::CDataSource::OK){
+	if(res.res==kvalobs::datasource::OK){
 		tryToResend=false;
 		return true;
-	}else if(res->res==CKvalObs::CDataSource::NOTSAVED){
+	}else if(res.res==kvalobs::datasource::NOTSAVED){
 		tryToResend=true;
-		LOGERROR("kvalobs NOTSAVED: " <<res->message);
-	}else if(res->res==CKvalObs::CDataSource::ERROR){
-		LOGERROR("kvalobs ERROR: " << res->message);
+		LOGERROR("kvalobs NOTSAVED: " <<res.message);
+	}else if(res.res==kvalobs::datasource::ERROR){
+		LOGERROR("kvalobs ERROR: " << res.message);
 		tryToResend=true;
-	}else if(res->res==CKvalObs::CDataSource::NODECODER){
-		LOGERROR("kvalobs NODECODER: " << res->message);
+	}else if(res.res==kvalobs::datasource::NODECODER){
+		LOGERROR("kvalobs NODECODER: " << res.message);
 		tryToResend=false;
-	}else  if(res->res==CKvalObs::CDataSource::DECODEERROR){
+	}else  if(res.res==kvalobs::datasource::DECODEERROR){
 
-		string msg(res->message);
+		string msg(res.message);
 		string::size_type i=msg.find("unknown station/position");
 
 		if( i == string::npos )
@@ -218,7 +219,7 @@ CollectWmoReports::sendMessageToKvalobs(const std::string &msg,
 		if(i!=string::npos)
 			return true;
 
-		LOGERROR("kvalobs DECODEERROR (rejected): " << res->message);
+		LOGERROR("kvalobs DECODEERROR (rejected): " << res.message);
 	}else{
 		LOGERROR("kvalobs Unknown response from kvalobs. Check if the code is in sync"
 				<< " with 'datasource.idl'!");

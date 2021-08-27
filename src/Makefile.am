@@ -11,7 +11,6 @@ norcom2kv_SOURCES = norcom2kv.cc \
                     App.cc App.h \
                     WMORaport.cc WMORaport.h \
                     crc_ccitt.cc crc_ccitt.h \
-                    CorbaThread.cc CorbaThread.h \
                     AdminImpl.cc AdminImpl.h \
                     File.cc File.h \
                     InitLogger.cc InitLogger.h \
