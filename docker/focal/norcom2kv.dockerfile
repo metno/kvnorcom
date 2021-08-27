@@ -41,7 +41,11 @@ RUN --mount=type=cache,target=/build cd /src/ && autoreconf -if && cd /build && 
 ENTRYPOINT [ "/bin/bash"]
 
 
-FROM ubuntu:focal
+FROM ubuntu:focal AS norcom2kv
+ARG DEBIAN_FRONTEND='noninteractive'
+ARG kvuser=kvalobs
+ARG kvuserid=5010
+
 RUN apt-get update && apt-get install -y language-pack-nb-base\
   gnupg2 software-properties-common apt-utils
 
@@ -54,5 +58,16 @@ RUN apt-get update && apt-get install --yes \
   libkvcpp9 libmetlibs-putools8 libboost-regex1.71.0
 
 COPY --from=build /usr/bin/norcom2kv /usr/bin/
+COPY docker/entrypoint.sh /usr/bin/
+COPY GITREF /usr/share/norcom2kv/VERSION
+RUN useradd -ms /bin/bash --uid ${kvuserid} --user-group  ${kvuser}
+RUN mkdir -p /etc/kvalobs && chown ${kvuser}:${kvuser}  /etc/kvalobs
+RUN mkdir -p /var/log/kvalobs && chown ${kvuser}:${kvuser}  /var/log/kvalobs
 
-ENTRYPOINT ["/usr/bin/norcom2kv"]
+VOLUME /etc/kvalobs
+VOLUME /var/log/kvalobs
+VOLUME /var/lib/kvalobs
+
+USER ${kvuser}:${kvuser}
+
+ENTRYPOINT ["/usr/bin/entrypoint.sh"]

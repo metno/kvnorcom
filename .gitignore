@@ -15,3 +15,6 @@
 /ltmain.sh
 /Makefile.in
 /missing
+GITREF
+.settings/
+build/
