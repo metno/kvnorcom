@@ -28,7 +28,6 @@ container registry at $registry.
 If --test, the default, is used it will not be copied 
 to the registry.
 
-
 Options:
   --help        display this help and exit.
   --tag tagname tag the image with the name tagname, default $tag.
@@ -41,7 +40,6 @@ Options:
   
 "
 echo -e "$usage\n\n"
-
 }
 
 
