@@ -8,7 +8,6 @@ mode=test
 targets=norcom2kv
 tag=latest
 os=focal
-#os=bionic
 registry="registry.met.no/obs/kvalobs/kvbuild"
 nocache=
 only_build=
@@ -18,7 +17,7 @@ gitref=$(git rev-parse --show-toplevel)/gitref.sh
 use() {
 
   usage="\
-Usage: $0 [--help] [--staging|--prod|--test] [--tag tag] [--no-cache] [--only-build] target-list
+Usage: $0 [--help] [--os os] [--staging|--prod|--test] [--tag tag] [--no-cache] [--only-build] target-list
 
 This script build a norcom2kv container. 
 Stop at build stage 'stage'. Default $targets.
@@ -30,6 +29,7 @@ to the registry.
 
 Options:
   --help        display this help and exit.
+  --os os       The os to build for, default $os. 
   --tag tagname tag the image with the name tagname, default $tag.
   --staging     build and push to staging.
   --prod        build and push to prod.
@@ -49,6 +49,9 @@ while test $# -ne 0; do
     --help) 
         use
         exit 0;;
+    --os)
+        os=$2
+        shift;;
     --staging) mode=staging;;
     --prod) mode=prod;;
     --test) mode=test;;
