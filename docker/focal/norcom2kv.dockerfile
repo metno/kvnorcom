@@ -55,7 +55,7 @@ RUN apt-key add /tmp/internrepo-4E8A0C14.asc && rm /tmp/internrepo-4E8A0C14.asc 
   add-apt-repository 'deb [arch=amd64] http://internrepo.met.no/focal focal main contrib'
 
 RUN apt-get update && apt-get install --yes \
-  libkvcpp9 libmetlibs-putools8 libboost-regex1.71.0
+  libkvcpp10 libmetlibs-putools8 libboost-regex1.71.0
 
 COPY --from=build /usr/bin/norcom2kv /usr/bin/
 COPY docker/entrypoint.sh /usr/bin/
