@@ -37,6 +37,7 @@
 #include "InitLogger.h"
 #include <iostream>
 #include <kvalobs/kvPath.h>
+#include "App.h"
 
 using namespace milog;
 using namespace std;
@@ -54,7 +55,13 @@ void InitLogger(int argn, char **argv, miutil::conf::ConfSection *conf, const st
   FLogStream *fs;
   StdErrStream *trace;
 
-  filename = kvPath("logdir") + "/" + logname + ".log";
+  filename = getDir(conf, "logdir");
+  if( filename.empty() ) {
+    filename=kvPath("logdir");
+  }
+  
+  filename=fixPath(filename);
+  filename=filename+logname+".log";
 
   if (conf) {
     logLevel = getLogLevel(conf->getValue("loglevel").valAsString("INFO"));

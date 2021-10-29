@@ -42,6 +42,19 @@ using namespace std;
 
 string progname;
 
+
+std::string rundir() {
+  auto conf = App::getConfiguration();
+  auto rdir=getDir(conf, "rundir");
+
+  if( rdir.empty() ) {
+    rdir=kvalobs::kvPath(kvalobs::rundir);
+  }
+
+  return fixPath(rdir);
+}
+
+
 int
 main(int argn, char **argv)
 {
@@ -53,7 +66,7 @@ main(int argn, char **argv)
   progname=getCmdNameFromArgv0( argv[0] );
   App::setConfFile( progname+".conf" );
   InitLogger(argn, argv, App::getConfiguration(), progname);
-  pidfile = dnmi::file::createPidFileName( kvalobs::kvPath(kvalobs::rundir), progname );
+  pidfile = dnmi::file::createPidFileName( rundir(), progname );
 
   App app(argn, argv);
   

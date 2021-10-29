@@ -41,6 +41,12 @@
 #include "FInfo.h"
 #include "kvDataSrcList.h"
 
+///fixPath
+std::string fixPath( const std::string &path );
+std::string getDir( miutil::conf::ConfSection *conf, const char *key );
+
+
+
 class App : public KvBaseApp
 {
 public:
@@ -49,6 +55,7 @@ public:
 
 private:
   std::string synopdir_;
+  std::string workdir_;
   std::string tmpdir_;
   std::string data2kvdir_;
   bool        test_;
@@ -107,6 +114,7 @@ private:
    //std::string relpath(const std::string &path, bool kvalobs=true);
    std::string logdir()const { return logdir_;}
    bool        test()const{ return test_;}
+   std::string workdir()const { return workdir_; }
    std::string tmpdir()const {return tmpdir_;}
    std::string data2kvdir()const {return data2kvdir_;}
    std::string synopdir()const{ return synopdir_;}

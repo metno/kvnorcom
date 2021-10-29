@@ -41,6 +41,7 @@
 #include "boost/foreach.hpp"
 #include "boost/lexical_cast.hpp"
 #include "boost/algorithm/string.hpp"
+#include "boost/algorithm/string/replace.hpp"
 #include "boost/filesystem.hpp"
 #include "milog/milog.h"
 #include "miutil/timeconvert.h"
@@ -62,6 +63,27 @@ namespace fs=boost::filesystem;
 namespace pt=boost::posix_time;
 
 extern string progname;
+
+std::string fixPath( const std::string &path_ ) {
+   std::string path(path_);
+   
+   if( path.rbegin() != path.rend() && *path.rbegin() != '/')
+     path += "/";
+
+   boost::algorithm::replace_all(path, "//", "/");
+   return path;
+}
+
+
+string
+getDir( ConfSection *conf, const char *key )
+{
+   string val = boost::trim_copy(conf->getValue( key ).valAsString(""));
+   
+   return fixPath(val);
+}
+
+
 
 namespace{
 volatile sig_atomic_t sigTerm=0;
@@ -140,15 +162,6 @@ getRaportConf( ConfSection *myConf ) {
    return raports;
 }
 
-string
-getDir( ConfSection *conf, const char *key )
-{
-   string val = boost::trim_copy(conf->getValue( key ).valAsString(""));
-   if( val.rbegin() != val.rend() && *val.rbegin() != '/')
-     val += "/";
-
-   return val;
-}
 
 void
 createDir( std::string &dir )
@@ -168,8 +181,8 @@ createDir( std::string &dir )
       exit( 1 );
    }
 
-   if( dir.rbegin() != dir.rend() && *dir.rbegin() != '/')
-      dir += "/";
+   dir = fixPath(dir);
+   
 }
 
 TKvDataSrcList getKvServers(ConfSection *conf){
@@ -232,22 +245,29 @@ App::App(int argn,
    else
      ignoreFilesBeforeStartup = pt::ptime( pt::neg_infin );
 
-   data2kvdir_=getDir(myConf, "workdir");
 
-   if ( data2kvdir_.empty() )
-      data2kvdir_ = kvPath("localstatedir", "norcom2kv")+"/data2kv/";
+   workdir_=getDir(myConf, "workdir");
 
-   tmpdir_ = data2kvdir_ + "tmp/";
+   if ( workdir_.empty() )
+      workdir_ = kvPath("localstatedir", "norcom2kv");
+
+   workdir_= fixPath( workdir_ );
+
+   data2kvdir_=fixPath(workdir_+"/data2kv/");
+
+   tmpdir_ = fixPath(data2kvdir_ + "/tmp/");
    logdir_ = getDir(myConf, "logdir");
 
    if ( logdir_.empty() )
      logdir_   = kvPath("logdir" );
+   
+   logdir_ = fixPath(logdir_);
 
    createDir( data2kvdir_ );
    createDir( tmpdir_ );
    createDir( logdir_ );
 
-   synopdir_=myConf->getValue("synopdir").valAsString("");
+   synopdir_=getDir(myConf, "synopdir");
 
    if(synopdir_.empty())
      usage();

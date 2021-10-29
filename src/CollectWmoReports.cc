@@ -44,7 +44,6 @@
 #include "CollectWmoReports.h"
 #include "crc_ccitt.h"
 #include <puTools/miTime.h>
-#include <kvalobs/kvPath.h>
 
 using namespace std;
 using namespace miutil;
@@ -117,9 +116,7 @@ CollectWmoReports::getFileList(FileList &fileList,
 		LOGERROR("getFileList: path is empty!!!!");
 		return false;
 	}
-
-	if(*path.rbegin()!='/')
-		path.append("/");
+	path = fixPath(path);
 
 	if(!dir.open(path, pattern)){
 		LOGERROR("Cant read directory <" << path << ">!");
@@ -245,8 +242,10 @@ CollectWmoReports::run()
 		return 1;
 	}
 
-	app.readFInfoList( kvPath("localstatedir", "norcom2kv")+"/" + progname +"_finfo.dat",
-			fileInfoList);
+	std::string stateFile(app.workdir() + progname + "_finfo.dat");
+	LOGINFO("CollectWmoReports: State file '" << stateFile << "'.");
+
+	app.readFInfoList( stateFile, fileInfoList);
 
 	while(!app.inShutdown()){
 		time(&tNow);
@@ -258,8 +257,7 @@ CollectWmoReports::run()
 
 			if(checkForNewObservations()){
 				collectObservations();
-				app.saveFInfoList( kvPath("localstatedir", "norcom2kv")+"/" + progname +"_finfo.dat",
-						fileInfoList);
+				app.saveFInfoList( stateFile,	fileInfoList);
 
 			}
 		}
