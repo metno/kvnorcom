@@ -13,6 +13,9 @@ echo "getent: $(getent passwd kvalobs)"
 echo "id: $(id -u)"
 echo "VERSION: $version"
 
+if [ $# -gt 0 ]; then
+  app="$1"
+fi
 
 echo "app: '$app'  $#"
 echo "$version" > "/var/log/kvalobs/${app}_VERSION"
