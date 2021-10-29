@@ -1,3 +1,8 @@
+norcom2kv (3.0.3~rc2-1) focal; urgency=low
+  * Make paths more configureable.
+   
+ -- Kvalobs <kvalobs@met.no>  Fri, 29 Oct 2021 10:00:00 +0200
+
 norcom2kv (3.0.3~rc1-1) focal; urgency=low
   * Rebuild againt libkvalobs
    

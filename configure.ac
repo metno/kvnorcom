@@ -1,5 +1,5 @@
 AC_PREREQ([2.59])
-AC_INIT([norcom2kv], [3.0.2], [kvoss@met.no])
+AC_INIT([norcom2kv], [3.0.3~rc2], [kvoss@met.no])
 AM_INIT_AUTOMAKE([foreign])
 AC_CONFIG_MACRO_DIR([m4])
 
