@@ -264,6 +264,11 @@ App::App(int argn,
    
    logdir_ = fixPath(logdir_);
 
+   LOGINFO("workdir: '" << workdir_ << "'");
+   LOGINFO("data2kvdir: '" << data2kvdir_ << "'");
+   LOGINFO("tmpdir: '" << tmpdir_ << "'");
+   LOGINFO("logdir: '" << logdir_ << "'");
+
    createDir( data2kvdir_ );
    createDir( tmpdir_ );
    createDir( logdir_ );
