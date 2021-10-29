@@ -1,3 +1,8 @@
+norcom2kv (3.0.3~rc3-1) focal; urgency=low
+  * Small refinment in fixPath.
+   
+ -- Kvalobs <kvalobs@met.no>  Fri, 29 Oct 2021 12:30:00 +0200
+
 norcom2kv (3.0.3~rc2-1) focal; urgency=low
   * Make paths more configureable.
    
