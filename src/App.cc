@@ -67,10 +67,11 @@ extern string progname;
 std::string fixPath( const std::string &path_ ) {
    std::string path(path_);
    
+   boost::algorithm::replace_all(path, "//", "/");
+
    if( path.rbegin() != path.rend() && *path.rbegin() != '/')
      path += "/";
-
-   boost::algorithm::replace_all(path, "//", "/");
+   
    return path;
 }
 
