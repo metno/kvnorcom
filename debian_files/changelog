@@ -1,3 +1,8 @@
+norcom2kv (3.0.3-1) focal; urgency=low
+  * No changes since last rc3.
+   
+ -- Kvalobs <kvalobs@met.no>  Wed, 19 Jul 2023 14:45:00 +0200
+
 norcom2kv (3.0.3~rc3-1) focal; urgency=low
   * Small refinment in fixPath.
    
