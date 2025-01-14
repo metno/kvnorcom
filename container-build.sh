@@ -8,7 +8,8 @@ mode="test"
 targets="norcom2kv"
 tag=latest
 tag_and_latest="false"
-os=focal
+default_os=focal
+os=noble
 registry="registry.met.no/met/obsklim/bakkeobservasjoner/data-og-kvalitet/kvalobs/kvbuild"
 nocache=
 push="true"
@@ -106,12 +107,16 @@ echo "Build: $build"
 echo "Push: $push"
 echo "targets: $targets"
 
+
 if [ "$mode" = "test" ]; then 
   kvuserid=$(id -u)
-  registry=""
-else 
+  registry="$os/"
+elif  [ "$os" = "$default_os" ]; then
   registry="$registry/$mode/"
+else
+  registry="$registry/$mode-$os/"
 fi
+
 
 echo "registry: $registry"
 echo "tag: $tag"
