@@ -28,8 +28,7 @@ gitref=$(git rev-parse --show-toplevel)/gitref.sh
 use() {
 
   usage="\
-Usage: $0 [--help] [--os os] [--staging|--prod|--test] [--tag tag] [--no-cache] [--only-build] 
-       [--tag-and-latest tag] [--tag-version] [--tag-with-build-date]
+Usage: $0 [--help] [options]
 
 This script build a norcom2kv container. 
 
@@ -54,7 +53,8 @@ Options:
   --no-cache    Do not use the docker build cache.
   --only-build  Stop after building.
   --only-push   Only push to registry. Must use the same flags as when building.
-
+  --print-version-tag 
+                Print the version tag and exit. 
   
 "
 echo -e "$usage\n\n"
@@ -91,6 +91,9 @@ while test $# -ne 0; do
         push="false";;
     --only-push)
         build="true";;
+    --print-version-tag)
+        echo "$VERSION-$BUILDDATE"
+        exit 0;;
     -*) use
       echo "Invalid option $1"
       exit 1;;  
