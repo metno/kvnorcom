@@ -7,7 +7,6 @@ kvuserid=5010
 mode="test"
 targets="norcom2kv"
 tag=latest
-tag_and_latest="false"
 default_os=noble
 os=noble
 registry="registry.met.no/met/obsklim/bakkeobservasjoner/data-og-kvalitet/kvalobs/kvbuild"
@@ -17,6 +16,8 @@ build="true"
 VERSION="$(./version.sh)"
 BUILDDATE=$(date +'%Y%m%d')
 KV_BUILD_DATE=${KV_BUILD_DATE:-}
+tags=""
+tag_counter=0
 
 if [ -n "${KV_BUILD_DATE}" ]; then
   BUILDDATE=$KV_BUILD_DATE
@@ -42,20 +43,22 @@ Options:
   --os os       The os to build for, default $os. 
   --tag tagname tag the image with the name tagname, default $tag.
   --tag-and-latest tagname tag the image with the name tagname  and also create latest tag.
-  --tag-version Use version from configure.ac as tag. Also tag latest.
   --tag-with-build-date 
-                tag with version and build date on the form version-YYYYMMDD 
-                and set latest. If the enviroment variable KV_BUILD_DATE is set use
+                Creates three tags: ${VERSION}, latest and a ${VERSION}-${BUILDDATE}.
+                If the enviroment variable KV_BUILD_DATE is set use
                 this as the build date. Format KV_BUILD_DATE YYYYMMDD.
   --staging     build and push to staging.
   --prod        build and push to prod.
   --test        only build. Default.
   --no-cache    Do not use the docker build cache.
-  --only-build  Stop after building.
-  --only-push   Only push to registry. Must use the same flags as when building.
+  --build-only  Stop after building.
+  --push-only   Only push to registry. Must use the same flags as when building.
   --print-version-tag 
                 Print the version tag and exit. 
-  
+
+  The following opptions is mutally exclusive: --tag, --tag-and-latest, --tag-with-build-date
+  The following options is mutally exclusive: --build-only, --push-only
+  The following options is mutally exclusive: --staging, --prod, --test
 "
 echo -e "$usage\n\n"
 }
@@ -66,16 +69,13 @@ while test $# -ne 0; do
     --tag) tag=$2; shift;;
     --tag-and-latest) 
         tag="$2"
-        tag_and_latest=true
+        tags="latest"
+        tag_counter=$((tag_counter + 1))
         shift
         ;;
-    --tag-version) 
-        tag="$VERSION"
-        tag_and_latest=true
-        ;;
     --tag-with-build-date)
-        tag="$VERSION-$BUILDDATE"
-        tag_and_latest=true
+        tag_counter=$((tag_counter + 1))
+        tags="latest $VERSION-$BUILDDATE"
         ;;
     --help) 
         use
@@ -87,9 +87,9 @@ while test $# -ne 0; do
     --prod) mode="prod";;
     --test) mode="test";;
     --no-cache) nocache="--no-cache";;
-    --only-build)
+    --build-only)
         push="false";;
-    --only-push)
+    --push-only)
         build="true";;
     --print-version-tag)
         echo "$VERSION-$BUILDDATE"
@@ -102,8 +102,14 @@ while test $# -ne 0; do
   shift
 done
 
+if [ $tag_counter -gt 1 ]; then
+  echo "Only one of --tag, --tag-and-latest or --tag-with-build-date can be used"
+  exit 1
+fi
+
 echo "VERSION: $VERSION"
 echo "tag: $tag"
+echo "tags: $tags"
 echo "mode: $mode"
 echo "os: $os"
 echo "Build: $build"
@@ -124,25 +130,26 @@ fi
 echo "registry: $registry"
 echo "tag: $tag"
 
-
 $gitref 
 
 for target in $targets ; do
   if [ "$build" = "true" ]; then
     docker build $nocache --target $target --build-arg "kvuser=$kvuser" --build-arg "kvuserid=$kvuserid" \
       -f docker/${os}/${target}.dockerfile --tag ${registry}${target}:$tag .
-  
-    if [ "$tag_and_latest" = "true" ] && [ "${tag}" != "latest" ]; then
-        docker tag "${registry}${target}:$tag" "${registry}${target}:latest"
-    fi
+
+    for tagname in $tags; do
+      echo "Tagging: ${registry}${target}:$tagname"
+      docker tag "${registry}${target}:$tag" "${registry}${target}:$tagname"
+    done 
   fi
   
   if [ $mode != test ] && [ "$push" = "true" ]; then 
+    echo "Pushing: ${registry}${target}:$tag"
     docker push ${registry}${target}:$tag
-    if [ "$tag_and_latest" = "true" ] && [ "${tag}" != "latest" ]; then
-      docker push "${registry}${target}:latest"
-    fi
+    
+    for tagname in $tags; do
+      echo "Pushing: ${registry}${target}:$tagname"
+      docker push "${registry}${target}:$tagname"
+    done
   fi
 done
-
-
