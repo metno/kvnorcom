@@ -5,6 +5,7 @@ export DOCKER_BUILDKIT=1
 kvuser=kvalobs
 kvuserid=5010
 mode="test"
+kvcpp_tag="latest"
 targets="norcom2kv"
 default_os=noble
 os=noble
@@ -53,6 +54,8 @@ Options:
   --no-cache    Do not use the docker build cache.
   --build-only  Stop after building.
   --push-only   Only push to registry. Must use the same flags as when building.
+  --kvcpp-tag tagname 
+                Use the specified kvcpp base image tag, default $kvcpp_tag.
   --print-version-tag 
                 Print the version tag and exit. 
 
@@ -80,6 +83,8 @@ while test $# -ne 0; do
     --help) 
         use
         exit 0;;
+    --kvcpp-tag) 
+        kvcpp_tag=$2; shift;;
     --os)
         os=$2
         shift;;
@@ -110,6 +115,7 @@ fi
 echo "VERSION: $VERSION"
 echo "tag: $tag"
 echo "tags: $tags"
+echo "kvcpp_tag: $kvcpp_tag"
 echo "mode: $mode"
 echo "os: $os"
 echo "Build: $build"
@@ -135,6 +141,7 @@ $gitref
 for target in $targets ; do
   if [ "$build" = "true" ]; then
     docker build $nocache --target $target --build-arg "kvuser=$kvuser" --build-arg "kvuserid=$kvuserid" \
+      --build-arg "REGISTRY=$registry" --build-arg "BASE_IMAGE_TAG=$kvcpp_tag" \
       -f docker/${os}/${target}.dockerfile --tag ${registry}${target}:$tag .
 
     for tagname in $tags; do

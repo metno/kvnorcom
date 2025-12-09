@@ -39,12 +39,12 @@ AC_DEFUN([LIBKVCPP],
 [
     PKG_CHECK_MODULES(kvcpp, libkvcpp)
 
-	KVIDLDIR=`pkg-config --variable=idldir libkvcpp`
-	if test ! -x $KVIDLDIR; then
-		AC_MSG_ERROR([Unable to locate the idl files to KVALOBS])
-	fi
+	# KVIDLDIR=`pkg-config --variable=idldir libkvcpp`
+	# if test ! -x $KVIDLDIR; then
+	# 	AC_MSG_ERROR([Unable to locate the idl files to KVALOBS])
+	# fi
 	
-	AC_SUBST(KVIDLDIR)
+	# AC_SUBST(KVIDLDIR)
 ])
 
 

@@ -1,5 +1,5 @@
 AC_PREREQ([2.71])
-AC_INIT([norcom2kv],[3.0.3],[kvoss@met.no])
+AC_INIT([norcom2kv],[3.0.4],[kvoss@met.no])
 AM_INIT_AUTOMAKE([foreign])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -12,7 +12,8 @@ AC_CONFIG_HEADERS(config.h)
 AX_CXX_COMPILE_STDCXX([20],[noext],[mandatory]) 
 KV_FIND_OMNIORB4
 PKG_CHECK_MODULES(putools, puTools)
-LIBKVCPP
+#LIBKVCPP
+PKG_CHECK_MODULES(kvcpp, libkvcpp)
 
 GTEST_CHECK
 GMOCK_CHECK

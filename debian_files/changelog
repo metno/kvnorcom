@@ -1,3 +1,9 @@
+norcom2kv (3.0.4-1) focal; urgency=low
+  * Removed unused files.
+  * Build with kvcpp-dev container
+   
+ -- Kvalobs <kvalobs@met.no>  Tue, 9 Dec 2025 10:00:00 +0100
+
 norcom2kv (3.0.3-1) focal; urgency=low
   * No changes since last rc3.
    
